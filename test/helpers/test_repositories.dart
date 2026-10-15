@@ -11,13 +11,15 @@ import 'package:langtool/utils/result.dart';
 
 /// Repositories over an in-memory database with a controllable clock.
 class TestRepositories {
-  TestRepositories() {
+  /// [idPrefix] keeps ids unique when several instances act as devices.
+  TestRepositories({this.idPrefix = 'id'}) {
     driftRuntimeOptions.dontWarnAboutMultipleDatabases = true;
     db = AppDatabase(NativeDatabase.memory());
     packs = LocalLanguagePackRepository(db, clock: clock, newId: newId);
     entries = LocalEntryRepository(db, clock: clock, newId: newId);
   }
 
+  final String idPrefix;
   late final AppDatabase db;
   late final LanguagePackRepository packs;
   late final EntryRepository entries;
@@ -27,7 +29,7 @@ class TestRepositories {
   var _nextId = 0;
 
   DateTime clock() => now = now.add(const Duration(seconds: 1));
-  String newId() => 'id-${(_nextId++).toString().padLeft(4, '0')}';
+  String newId() => '$idPrefix-${(_nextId++).toString().padLeft(4, '0')}';
 
   Future<LanguagePack> createPack([String name = 'Deutsch']) async => _ok(
     await packs.create(ownerId: 'user-1', name: name, languageCode: 'de'),

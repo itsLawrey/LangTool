@@ -160,7 +160,11 @@ class LocalEntryRepository implements EntryRepository {
         await (_db.update(
           _db.entries,
         )..where((e) => e.id.equals(id) & e.deletedAt.isNull())).write(
-          EntriesCompanion(deletedAt: Value(now), updatedAt: Value(now)),
+          EntriesCompanion(
+            deletedAt: Value(now),
+            updatedAt: Value(now),
+            needsPush: const Value(true),
+          ),
         );
     return updated == 0
         ? Result.error(NotFoundException(id))

@@ -2,6 +2,7 @@ import 'package:drift/drift.dart';
 
 import '../../domain/models/entry.dart';
 import '../../domain/models/word_type.dart';
+import 'app_database.steps.dart';
 import 'converters.dart';
 
 part 'app_database.g.dart';
@@ -16,6 +17,10 @@ class LanguagePacks extends Table {
   DateTimeColumn get createdAt => dateTime()();
   DateTimeColumn get updatedAt => dateTime()();
   DateTimeColumn get deletedAt => dateTime().nullable()();
+
+  /// Whether this row has local changes not yet uploaded. Rows written by
+  /// the app are dirty; rows applied from the server are clean.
+  BoolColumn get needsPush => boolean().withDefault(const Constant(true))();
 
   @override
   Set<Column<Object>> get primaryKey => {id};
@@ -56,19 +61,50 @@ class Entries extends Table {
   TextColumn get searchTranslations => text()();
   TextColumn get duplicateKey => text()();
 
+  /// Whether this row has local changes not yet uploaded. Rows written by
+  /// the app are dirty; rows applied from the server are clean.
+  BoolColumn get needsPush => boolean().withDefault(const Constant(true))();
+
   @override
   Set<Column<Object>> get primaryKey => {id};
 }
 
-@DriftDatabase(tables: [LanguagePacks, Entries])
+/// Per-account sync progress.
+@DataClassName('SyncStateRow')
+class SyncStates extends Table {
+  TextColumn get ownerId => text()();
+
+  /// Server time up to which pack changes have been pulled.
+  DateTimeColumn get packsPulledUntil => dateTime().nullable()();
+
+  /// Server time up to which entry changes have been pulled.
+  DateTimeColumn get entriesPulledUntil => dateTime().nullable()();
+
+  /// When the last sync finished successfully.
+  DateTimeColumn get lastSyncedAt => dateTime().nullable()();
+
+  @override
+  Set<Column<Object>> get primaryKey => {ownerId};
+}
+
+@DriftDatabase(tables: [LanguagePacks, Entries, SyncStates])
 class AppDatabase extends _$AppDatabase {
   AppDatabase(super.executor);
 
   @override
-  int get schemaVersion => 1;
+  int get schemaVersion => 2;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
+    onUpgrade: stepByStep(
+      // Sync: existing rows were never uploaded, so they start dirty
+      // (the column default).
+      from1To2: (m, schema) async {
+        await m.addColumn(schema.languagePacks, schema.languagePacks.needsPush);
+        await m.addColumn(schema.entries, schema.entries.needsPush);
+        await m.createTable(schema.syncStates);
+      },
+    ),
     beforeOpen: (details) async {
       await customStatement('PRAGMA foreign_keys = ON');
     },

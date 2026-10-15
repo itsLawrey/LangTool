@@ -55,14 +55,49 @@ Layered per Flutter's official architecture guide (MVVM with `provider` and `go_
   - `entries` rows carry derived columns written by `mappers.dart`: `search_term`, `search_translations` (newline-joined) and `duplicate_key`.
   - A partial unique index on `(pack_id, word_type, duplicate_key) WHERE deleted_at IS NULL` enforces the no-duplicates rule at the DB level.
   - Dates are stored as ISO-8601 text (`build.yaml`).
-  - Schema changes need a `schemaVersion` bump plus a migration in `AppDatabase.migration`.
+  - Schema changes follow this workflow:
+    1. change the tables and bump `schemaVersion`;
+    2. run `dart run drift_dev make-migrations`, which snapshots the schema into `drift_schemas/`, regenerates `app_database.steps.dart` and creates tests in `test/drift/`;
+    3. add the `fromNToM` step to `stepByStep` in `AppDatabase.migration`;
+    4. extend the generated data-integrity test.
+  - Never edit an existing version's snapshot.
 - `lib/data/repositories/`: an abstract interface plus a `Local…` Drift implementation per aggregate.
   - Writes return `Result<T>` (`lib/utils/result.dart`: `Ok`/`Err`) carrying the exceptions in `lib/domain/exceptions.dart`.
   - `EntryRepository.add`/`update` validate against the pack's `LanguageSchema`, then the duplicate rule.
   - `search` runs a SQL `LIKE` on the normalized columns for direct matches. Only if there are none, it scores a lightweight `(id, keys)` projection in Dart for fuzzy matches.
   - Deletes are soft. Deleting a pack soft-deletes its entries.
   - Clock and id generator are injectable (`lib/utils/clock.dart`; ids are UUID v7).
-- Tests use an in-memory DB: `AppDatabase(NativeDatabase.memory())`.
+- Tests use an in-memory DB: `AppDatabase(NativeDatabase.memory())`. `test/helpers/` has `TestRepositories`, which provides repositories over an in-memory DB with a controllable clock, and `FakeRemoteSyncApi`, which mirrors the server write rules.
+
+## Cloud sync (Supabase)
+
+Offline-first, automatic two-way sync, last write wins per row.
+
+- **Server schema** lives only in `supabase/migrations/<version>_<name>.sql`.
+  - Apply new migrations with the Supabase MCP `apply_migration`, then rename the file to the version `list_migrations` reports.
+  - Afterwards, run `get_advisors` (security and performance).
+  - Tables `public.language_packs` and `public.entries` mirror the local tables (JSON fields are `jsonb`).
+  - RLS limits rows to `owner_id = (select auth.uid())`, and entries may only reference the user's own packs.
+  - `anon` has no access, and `authenticated` has no `DELETE` (deletions are soft, via `deleted_at`).
+  - The trigger `private.apply_sync_write()` stamps `server_updated_at` and ignores updates whose `updated_at` is older than the stored row. It also keeps `owner_id` and `created_at` immutable.
+  - When adding a `WordType`, also extend the `entries.word_type` check constraint with a migration, applied before the app release.
+- **Local:**
+  - Every app write sets `needs_push` on its row. `mappers.dart`'s `toCompanion(needsPush:)` defaults to true; only rows applied from the server pass false.
+  - `sync_states` stores the per-account pull cursors (`packs_pulled_until`, `entries_pulled_until`) and `last_synced_at`.
+- **`SyncEngine.run(ownerId)`** (`data/repositories/sync_engine.dart`):
+  1. Push dirty packs, then dirty entries, in batches, via `RemoteSyncApi` upserts (`data/services/supabase_sync_api.dart`). A row is marked clean only if `updated_at` is unchanged since it was read.
+  2. Pull packs, then entries, keyset-paged by (`server_updated_at`, `id`), starting `overlap` (1 min) before the stored cursor so late commits aren't missed. `LocalSyncStore.applyRemote*` keeps only versions not older than the local one.
+  3. Push again to upload any conflict deletions.
+- **Duplicate across devices** (same pack, word type and duplicate key, different ids): `LocalSyncStore` keeps the entry created first (ties go to the smaller id) and soft-deletes the other, marked dirty.
+- **Unknown pack:** an entry whose pack isn't known locally yet stops the page. It's retried on the next sync.
+- **`SyncRepository`** (ChangeNotifier) triggers syncs:
+  - on sign-in;
+  - `debounce` after local dirty writes (it ignores writes made by sync itself);
+  - every `interval`;
+  - on app resume (`app.dart`);
+  - via `SyncButton` in the app bars.
+
+  It exposes `phase` (idle, syncing, offline, failed), `lastSyncedAt` and `error`. Network errors (`http.ClientException`, timeouts) count as offline.
 - Web: SQLite runs from `web/sqlite3.wasm` + `web/drift_worker.js`, taken from the drift GitHub release matching `pubspec.lock`'s drift version (currently `drift-2.35.2`). Replace both whenever drift is upgraded: `gh release download drift-<version> -R simolus3/drift -p drift_worker.js -p sqlite3.wasm -D web --clobber`. For the fastest browser storage (OPFS), serve with `Cross-Origin-Opener-Policy: same-origin` and `Cross-Origin-Embedder-Policy: require-corp`. In dev: `flutter run -d chrome --web-header=Cross-Origin-Opener-Policy=same-origin --web-header=Cross-Origin-Embedder-Policy=require-corp`. Without them it falls back to slower storage. Production hosting must serve `.wasm` as `application/wasm`.
 
 ## Supabase

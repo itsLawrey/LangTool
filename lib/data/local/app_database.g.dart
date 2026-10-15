@@ -82,6 +82,21 @@ class $LanguagePacksTable extends LanguagePacks
     type: DriftSqlType.dateTime,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _needsPushMeta = const VerificationMeta(
+    'needsPush',
+  );
+  @override
+  late final GeneratedColumn<bool> needsPush = GeneratedColumn<bool>(
+    'needs_push',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("needs_push" IN (0, 1))',
+    ),
+    defaultValue: const Constant(true),
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -91,6 +106,7 @@ class $LanguagePacksTable extends LanguagePacks
     createdAt,
     updatedAt,
     deletedAt,
+    needsPush,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -158,6 +174,12 @@ class $LanguagePacksTable extends LanguagePacks
         deletedAt.isAcceptableOrUnknown(data['deleted_at']!, _deletedAtMeta),
       );
     }
+    if (data.containsKey('needs_push')) {
+      context.handle(
+        _needsPushMeta,
+        needsPush.isAcceptableOrUnknown(data['needs_push']!, _needsPushMeta),
+      );
+    }
     return context;
   }
 
@@ -195,6 +217,10 @@ class $LanguagePacksTable extends LanguagePacks
         DriftSqlType.dateTime,
         data['${effectivePrefix}deleted_at'],
       ),
+      needsPush: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}needs_push'],
+      )!,
     );
   }
 
@@ -212,6 +238,10 @@ class LanguagePackRow extends DataClass implements Insertable<LanguagePackRow> {
   final DateTime createdAt;
   final DateTime updatedAt;
   final DateTime? deletedAt;
+
+  /// Whether this row has local changes not yet uploaded. Rows written by
+  /// the app are dirty; rows applied from the server are clean.
+  final bool needsPush;
   const LanguagePackRow({
     required this.id,
     required this.ownerId,
@@ -220,6 +250,7 @@ class LanguagePackRow extends DataClass implements Insertable<LanguagePackRow> {
     required this.createdAt,
     required this.updatedAt,
     this.deletedAt,
+    required this.needsPush,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -233,6 +264,7 @@ class LanguagePackRow extends DataClass implements Insertable<LanguagePackRow> {
     if (!nullToAbsent || deletedAt != null) {
       map['deleted_at'] = Variable<DateTime>(deletedAt);
     }
+    map['needs_push'] = Variable<bool>(needsPush);
     return map;
   }
 
@@ -247,6 +279,7 @@ class LanguagePackRow extends DataClass implements Insertable<LanguagePackRow> {
       deletedAt: deletedAt == null && nullToAbsent
           ? const Value.absent()
           : Value(deletedAt),
+      needsPush: Value(needsPush),
     );
   }
 
@@ -263,6 +296,7 @@ class LanguagePackRow extends DataClass implements Insertable<LanguagePackRow> {
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
       updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
       deletedAt: serializer.fromJson<DateTime?>(json['deletedAt']),
+      needsPush: serializer.fromJson<bool>(json['needsPush']),
     );
   }
   @override
@@ -276,6 +310,7 @@ class LanguagePackRow extends DataClass implements Insertable<LanguagePackRow> {
       'createdAt': serializer.toJson<DateTime>(createdAt),
       'updatedAt': serializer.toJson<DateTime>(updatedAt),
       'deletedAt': serializer.toJson<DateTime?>(deletedAt),
+      'needsPush': serializer.toJson<bool>(needsPush),
     };
   }
 
@@ -287,6 +322,7 @@ class LanguagePackRow extends DataClass implements Insertable<LanguagePackRow> {
     DateTime? createdAt,
     DateTime? updatedAt,
     Value<DateTime?> deletedAt = const Value.absent(),
+    bool? needsPush,
   }) => LanguagePackRow(
     id: id ?? this.id,
     ownerId: ownerId ?? this.ownerId,
@@ -295,6 +331,7 @@ class LanguagePackRow extends DataClass implements Insertable<LanguagePackRow> {
     createdAt: createdAt ?? this.createdAt,
     updatedAt: updatedAt ?? this.updatedAt,
     deletedAt: deletedAt.present ? deletedAt.value : this.deletedAt,
+    needsPush: needsPush ?? this.needsPush,
   );
   LanguagePackRow copyWithCompanion(LanguagePacksCompanion data) {
     return LanguagePackRow(
@@ -307,6 +344,7 @@ class LanguagePackRow extends DataClass implements Insertable<LanguagePackRow> {
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
       updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
       deletedAt: data.deletedAt.present ? data.deletedAt.value : this.deletedAt,
+      needsPush: data.needsPush.present ? data.needsPush.value : this.needsPush,
     );
   }
 
@@ -319,7 +357,8 @@ class LanguagePackRow extends DataClass implements Insertable<LanguagePackRow> {
           ..write('languageCode: $languageCode, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt, ')
-          ..write('deletedAt: $deletedAt')
+          ..write('deletedAt: $deletedAt, ')
+          ..write('needsPush: $needsPush')
           ..write(')'))
         .toString();
   }
@@ -333,6 +372,7 @@ class LanguagePackRow extends DataClass implements Insertable<LanguagePackRow> {
     createdAt,
     updatedAt,
     deletedAt,
+    needsPush,
   );
   @override
   bool operator ==(Object other) =>
@@ -344,7 +384,8 @@ class LanguagePackRow extends DataClass implements Insertable<LanguagePackRow> {
           other.languageCode == this.languageCode &&
           other.createdAt == this.createdAt &&
           other.updatedAt == this.updatedAt &&
-          other.deletedAt == this.deletedAt);
+          other.deletedAt == this.deletedAt &&
+          other.needsPush == this.needsPush);
 }
 
 class LanguagePacksCompanion extends UpdateCompanion<LanguagePackRow> {
@@ -355,6 +396,7 @@ class LanguagePacksCompanion extends UpdateCompanion<LanguagePackRow> {
   final Value<DateTime> createdAt;
   final Value<DateTime> updatedAt;
   final Value<DateTime?> deletedAt;
+  final Value<bool> needsPush;
   final Value<int> rowid;
   const LanguagePacksCompanion({
     this.id = const Value.absent(),
@@ -364,6 +406,7 @@ class LanguagePacksCompanion extends UpdateCompanion<LanguagePackRow> {
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
     this.deletedAt = const Value.absent(),
+    this.needsPush = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   LanguagePacksCompanion.insert({
@@ -374,6 +417,7 @@ class LanguagePacksCompanion extends UpdateCompanion<LanguagePackRow> {
     required DateTime createdAt,
     required DateTime updatedAt,
     this.deletedAt = const Value.absent(),
+    this.needsPush = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : id = Value(id),
        ownerId = Value(ownerId),
@@ -389,6 +433,7 @@ class LanguagePacksCompanion extends UpdateCompanion<LanguagePackRow> {
     Expression<DateTime>? createdAt,
     Expression<DateTime>? updatedAt,
     Expression<DateTime>? deletedAt,
+    Expression<bool>? needsPush,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -399,6 +444,7 @@ class LanguagePacksCompanion extends UpdateCompanion<LanguagePackRow> {
       if (createdAt != null) 'created_at': createdAt,
       if (updatedAt != null) 'updated_at': updatedAt,
       if (deletedAt != null) 'deleted_at': deletedAt,
+      if (needsPush != null) 'needs_push': needsPush,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -411,6 +457,7 @@ class LanguagePacksCompanion extends UpdateCompanion<LanguagePackRow> {
     Value<DateTime>? createdAt,
     Value<DateTime>? updatedAt,
     Value<DateTime?>? deletedAt,
+    Value<bool>? needsPush,
     Value<int>? rowid,
   }) {
     return LanguagePacksCompanion(
@@ -421,6 +468,7 @@ class LanguagePacksCompanion extends UpdateCompanion<LanguagePackRow> {
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       deletedAt: deletedAt ?? this.deletedAt,
+      needsPush: needsPush ?? this.needsPush,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -449,6 +497,9 @@ class LanguagePacksCompanion extends UpdateCompanion<LanguagePackRow> {
     if (deletedAt.present) {
       map['deleted_at'] = Variable<DateTime>(deletedAt.value);
     }
+    if (needsPush.present) {
+      map['needs_push'] = Variable<bool>(needsPush.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -465,6 +516,7 @@ class LanguagePacksCompanion extends UpdateCompanion<LanguagePackRow> {
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt, ')
           ..write('deletedAt: $deletedAt, ')
+          ..write('needsPush: $needsPush, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -648,6 +700,21 @@ class $EntriesTable extends Entries with TableInfo<$EntriesTable, EntryRow> {
     type: DriftSqlType.string,
     requiredDuringInsert: true,
   );
+  static const VerificationMeta _needsPushMeta = const VerificationMeta(
+    'needsPush',
+  );
+  @override
+  late final GeneratedColumn<bool> needsPush = GeneratedColumn<bool>(
+    'needs_push',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("needs_push" IN (0, 1))',
+    ),
+    defaultValue: const Constant(true),
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -667,6 +734,7 @@ class $EntriesTable extends Entries with TableInfo<$EntriesTable, EntryRow> {
     searchTerm,
     searchTranslations,
     duplicateKey,
+    needsPush,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -778,6 +846,12 @@ class $EntriesTable extends Entries with TableInfo<$EntriesTable, EntryRow> {
     } else if (isInserting) {
       context.missing(_duplicateKeyMeta);
     }
+    if (data.containsKey('needs_push')) {
+      context.handle(
+        _needsPushMeta,
+        needsPush.isAcceptableOrUnknown(data['needs_push']!, _needsPushMeta),
+      );
+    }
     return context;
   }
 
@@ -865,6 +939,10 @@ class $EntriesTable extends Entries with TableInfo<$EntriesTable, EntryRow> {
         DriftSqlType.string,
         data['${effectivePrefix}duplicate_key'],
       )!,
+      needsPush: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}needs_push'],
+      )!,
     );
   }
 
@@ -905,6 +983,10 @@ class EntryRow extends DataClass implements Insertable<EntryRow> {
   /// Normalized translations joined by `\n`.
   final String searchTranslations;
   final String duplicateKey;
+
+  /// Whether this row has local changes not yet uploaded. Rows written by
+  /// the app are dirty; rows applied from the server are clean.
+  final bool needsPush;
   const EntryRow({
     required this.id,
     required this.ownerId,
@@ -923,6 +1005,7 @@ class EntryRow extends DataClass implements Insertable<EntryRow> {
     required this.searchTerm,
     required this.searchTranslations,
     required this.duplicateKey,
+    required this.needsPush,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -966,6 +1049,7 @@ class EntryRow extends DataClass implements Insertable<EntryRow> {
     map['search_term'] = Variable<String>(searchTerm);
     map['search_translations'] = Variable<String>(searchTranslations);
     map['duplicate_key'] = Variable<String>(duplicateKey);
+    map['needs_push'] = Variable<bool>(needsPush);
     return map;
   }
 
@@ -992,6 +1076,7 @@ class EntryRow extends DataClass implements Insertable<EntryRow> {
       searchTerm: Value(searchTerm),
       searchTranslations: Value(searchTranslations),
       duplicateKey: Value(duplicateKey),
+      needsPush: Value(needsPush),
     );
   }
 
@@ -1022,6 +1107,7 @@ class EntryRow extends DataClass implements Insertable<EntryRow> {
         json['searchTranslations'],
       ),
       duplicateKey: serializer.fromJson<String>(json['duplicateKey']),
+      needsPush: serializer.fromJson<bool>(json['needsPush']),
     );
   }
   @override
@@ -1047,6 +1133,7 @@ class EntryRow extends DataClass implements Insertable<EntryRow> {
       'searchTerm': serializer.toJson<String>(searchTerm),
       'searchTranslations': serializer.toJson<String>(searchTranslations),
       'duplicateKey': serializer.toJson<String>(duplicateKey),
+      'needsPush': serializer.toJson<bool>(needsPush),
     };
   }
 
@@ -1068,6 +1155,7 @@ class EntryRow extends DataClass implements Insertable<EntryRow> {
     String? searchTerm,
     String? searchTranslations,
     String? duplicateKey,
+    bool? needsPush,
   }) => EntryRow(
     id: id ?? this.id,
     ownerId: ownerId ?? this.ownerId,
@@ -1086,6 +1174,7 @@ class EntryRow extends DataClass implements Insertable<EntryRow> {
     searchTerm: searchTerm ?? this.searchTerm,
     searchTranslations: searchTranslations ?? this.searchTranslations,
     duplicateKey: duplicateKey ?? this.duplicateKey,
+    needsPush: needsPush ?? this.needsPush,
   );
   EntryRow copyWithCompanion(EntriesCompanion data) {
     return EntryRow(
@@ -1116,6 +1205,7 @@ class EntryRow extends DataClass implements Insertable<EntryRow> {
       duplicateKey: data.duplicateKey.present
           ? data.duplicateKey.value
           : this.duplicateKey,
+      needsPush: data.needsPush.present ? data.needsPush.value : this.needsPush,
     );
   }
 
@@ -1138,7 +1228,8 @@ class EntryRow extends DataClass implements Insertable<EntryRow> {
           ..write('deletedAt: $deletedAt, ')
           ..write('searchTerm: $searchTerm, ')
           ..write('searchTranslations: $searchTranslations, ')
-          ..write('duplicateKey: $duplicateKey')
+          ..write('duplicateKey: $duplicateKey, ')
+          ..write('needsPush: $needsPush')
           ..write(')'))
         .toString();
   }
@@ -1162,6 +1253,7 @@ class EntryRow extends DataClass implements Insertable<EntryRow> {
     searchTerm,
     searchTranslations,
     duplicateKey,
+    needsPush,
   );
   @override
   bool operator ==(Object other) =>
@@ -1183,7 +1275,8 @@ class EntryRow extends DataClass implements Insertable<EntryRow> {
           other.deletedAt == this.deletedAt &&
           other.searchTerm == this.searchTerm &&
           other.searchTranslations == this.searchTranslations &&
-          other.duplicateKey == this.duplicateKey);
+          other.duplicateKey == this.duplicateKey &&
+          other.needsPush == this.needsPush);
 }
 
 class EntriesCompanion extends UpdateCompanion<EntryRow> {
@@ -1204,6 +1297,7 @@ class EntriesCompanion extends UpdateCompanion<EntryRow> {
   final Value<String> searchTerm;
   final Value<String> searchTranslations;
   final Value<String> duplicateKey;
+  final Value<bool> needsPush;
   final Value<int> rowid;
   const EntriesCompanion({
     this.id = const Value.absent(),
@@ -1223,6 +1317,7 @@ class EntriesCompanion extends UpdateCompanion<EntryRow> {
     this.searchTerm = const Value.absent(),
     this.searchTranslations = const Value.absent(),
     this.duplicateKey = const Value.absent(),
+    this.needsPush = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   EntriesCompanion.insert({
@@ -1243,6 +1338,7 @@ class EntriesCompanion extends UpdateCompanion<EntryRow> {
     required String searchTerm,
     required String searchTranslations,
     required String duplicateKey,
+    this.needsPush = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : id = Value(id),
        ownerId = Value(ownerId),
@@ -1277,6 +1373,7 @@ class EntriesCompanion extends UpdateCompanion<EntryRow> {
     Expression<String>? searchTerm,
     Expression<String>? searchTranslations,
     Expression<String>? duplicateKey,
+    Expression<bool>? needsPush,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -1297,6 +1394,7 @@ class EntriesCompanion extends UpdateCompanion<EntryRow> {
       if (searchTerm != null) 'search_term': searchTerm,
       if (searchTranslations != null) 'search_translations': searchTranslations,
       if (duplicateKey != null) 'duplicate_key': duplicateKey,
+      if (needsPush != null) 'needs_push': needsPush,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -1319,6 +1417,7 @@ class EntriesCompanion extends UpdateCompanion<EntryRow> {
     Value<String>? searchTerm,
     Value<String>? searchTranslations,
     Value<String>? duplicateKey,
+    Value<bool>? needsPush,
     Value<int>? rowid,
   }) {
     return EntriesCompanion(
@@ -1339,6 +1438,7 @@ class EntriesCompanion extends UpdateCompanion<EntryRow> {
       searchTerm: searchTerm ?? this.searchTerm,
       searchTranslations: searchTranslations ?? this.searchTranslations,
       duplicateKey: duplicateKey ?? this.duplicateKey,
+      needsPush: needsPush ?? this.needsPush,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -1407,6 +1507,9 @@ class EntriesCompanion extends UpdateCompanion<EntryRow> {
     if (duplicateKey.present) {
       map['duplicate_key'] = Variable<String>(duplicateKey.value);
     }
+    if (needsPush.present) {
+      map['needs_push'] = Variable<bool>(needsPush.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -1433,6 +1536,364 @@ class EntriesCompanion extends UpdateCompanion<EntryRow> {
           ..write('searchTerm: $searchTerm, ')
           ..write('searchTranslations: $searchTranslations, ')
           ..write('duplicateKey: $duplicateKey, ')
+          ..write('needsPush: $needsPush, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $SyncStatesTable extends SyncStates
+    with TableInfo<$SyncStatesTable, SyncStateRow> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $SyncStatesTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _ownerIdMeta = const VerificationMeta(
+    'ownerId',
+  );
+  @override
+  late final GeneratedColumn<String> ownerId = GeneratedColumn<String>(
+    'owner_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _packsPulledUntilMeta = const VerificationMeta(
+    'packsPulledUntil',
+  );
+  @override
+  late final GeneratedColumn<DateTime> packsPulledUntil =
+      GeneratedColumn<DateTime>(
+        'packs_pulled_until',
+        aliasedName,
+        true,
+        type: DriftSqlType.dateTime,
+        requiredDuringInsert: false,
+      );
+  static const VerificationMeta _entriesPulledUntilMeta =
+      const VerificationMeta('entriesPulledUntil');
+  @override
+  late final GeneratedColumn<DateTime> entriesPulledUntil =
+      GeneratedColumn<DateTime>(
+        'entries_pulled_until',
+        aliasedName,
+        true,
+        type: DriftSqlType.dateTime,
+        requiredDuringInsert: false,
+      );
+  static const VerificationMeta _lastSyncedAtMeta = const VerificationMeta(
+    'lastSyncedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> lastSyncedAt = GeneratedColumn<DateTime>(
+    'last_synced_at',
+    aliasedName,
+    true,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    ownerId,
+    packsPulledUntil,
+    entriesPulledUntil,
+    lastSyncedAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'sync_states';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<SyncStateRow> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('owner_id')) {
+      context.handle(
+        _ownerIdMeta,
+        ownerId.isAcceptableOrUnknown(data['owner_id']!, _ownerIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_ownerIdMeta);
+    }
+    if (data.containsKey('packs_pulled_until')) {
+      context.handle(
+        _packsPulledUntilMeta,
+        packsPulledUntil.isAcceptableOrUnknown(
+          data['packs_pulled_until']!,
+          _packsPulledUntilMeta,
+        ),
+      );
+    }
+    if (data.containsKey('entries_pulled_until')) {
+      context.handle(
+        _entriesPulledUntilMeta,
+        entriesPulledUntil.isAcceptableOrUnknown(
+          data['entries_pulled_until']!,
+          _entriesPulledUntilMeta,
+        ),
+      );
+    }
+    if (data.containsKey('last_synced_at')) {
+      context.handle(
+        _lastSyncedAtMeta,
+        lastSyncedAt.isAcceptableOrUnknown(
+          data['last_synced_at']!,
+          _lastSyncedAtMeta,
+        ),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {ownerId};
+  @override
+  SyncStateRow map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return SyncStateRow(
+      ownerId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}owner_id'],
+      )!,
+      packsPulledUntil: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}packs_pulled_until'],
+      ),
+      entriesPulledUntil: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}entries_pulled_until'],
+      ),
+      lastSyncedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}last_synced_at'],
+      ),
+    );
+  }
+
+  @override
+  $SyncStatesTable createAlias(String alias) {
+    return $SyncStatesTable(attachedDatabase, alias);
+  }
+}
+
+class SyncStateRow extends DataClass implements Insertable<SyncStateRow> {
+  final String ownerId;
+
+  /// Server time up to which pack changes have been pulled.
+  final DateTime? packsPulledUntil;
+
+  /// Server time up to which entry changes have been pulled.
+  final DateTime? entriesPulledUntil;
+
+  /// When the last sync finished successfully.
+  final DateTime? lastSyncedAt;
+  const SyncStateRow({
+    required this.ownerId,
+    this.packsPulledUntil,
+    this.entriesPulledUntil,
+    this.lastSyncedAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['owner_id'] = Variable<String>(ownerId);
+    if (!nullToAbsent || packsPulledUntil != null) {
+      map['packs_pulled_until'] = Variable<DateTime>(packsPulledUntil);
+    }
+    if (!nullToAbsent || entriesPulledUntil != null) {
+      map['entries_pulled_until'] = Variable<DateTime>(entriesPulledUntil);
+    }
+    if (!nullToAbsent || lastSyncedAt != null) {
+      map['last_synced_at'] = Variable<DateTime>(lastSyncedAt);
+    }
+    return map;
+  }
+
+  SyncStatesCompanion toCompanion(bool nullToAbsent) {
+    return SyncStatesCompanion(
+      ownerId: Value(ownerId),
+      packsPulledUntil: packsPulledUntil == null && nullToAbsent
+          ? const Value.absent()
+          : Value(packsPulledUntil),
+      entriesPulledUntil: entriesPulledUntil == null && nullToAbsent
+          ? const Value.absent()
+          : Value(entriesPulledUntil),
+      lastSyncedAt: lastSyncedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(lastSyncedAt),
+    );
+  }
+
+  factory SyncStateRow.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return SyncStateRow(
+      ownerId: serializer.fromJson<String>(json['ownerId']),
+      packsPulledUntil: serializer.fromJson<DateTime?>(
+        json['packsPulledUntil'],
+      ),
+      entriesPulledUntil: serializer.fromJson<DateTime?>(
+        json['entriesPulledUntil'],
+      ),
+      lastSyncedAt: serializer.fromJson<DateTime?>(json['lastSyncedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'ownerId': serializer.toJson<String>(ownerId),
+      'packsPulledUntil': serializer.toJson<DateTime?>(packsPulledUntil),
+      'entriesPulledUntil': serializer.toJson<DateTime?>(entriesPulledUntil),
+      'lastSyncedAt': serializer.toJson<DateTime?>(lastSyncedAt),
+    };
+  }
+
+  SyncStateRow copyWith({
+    String? ownerId,
+    Value<DateTime?> packsPulledUntil = const Value.absent(),
+    Value<DateTime?> entriesPulledUntil = const Value.absent(),
+    Value<DateTime?> lastSyncedAt = const Value.absent(),
+  }) => SyncStateRow(
+    ownerId: ownerId ?? this.ownerId,
+    packsPulledUntil: packsPulledUntil.present
+        ? packsPulledUntil.value
+        : this.packsPulledUntil,
+    entriesPulledUntil: entriesPulledUntil.present
+        ? entriesPulledUntil.value
+        : this.entriesPulledUntil,
+    lastSyncedAt: lastSyncedAt.present ? lastSyncedAt.value : this.lastSyncedAt,
+  );
+  SyncStateRow copyWithCompanion(SyncStatesCompanion data) {
+    return SyncStateRow(
+      ownerId: data.ownerId.present ? data.ownerId.value : this.ownerId,
+      packsPulledUntil: data.packsPulledUntil.present
+          ? data.packsPulledUntil.value
+          : this.packsPulledUntil,
+      entriesPulledUntil: data.entriesPulledUntil.present
+          ? data.entriesPulledUntil.value
+          : this.entriesPulledUntil,
+      lastSyncedAt: data.lastSyncedAt.present
+          ? data.lastSyncedAt.value
+          : this.lastSyncedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('SyncStateRow(')
+          ..write('ownerId: $ownerId, ')
+          ..write('packsPulledUntil: $packsPulledUntil, ')
+          ..write('entriesPulledUntil: $entriesPulledUntil, ')
+          ..write('lastSyncedAt: $lastSyncedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode =>
+      Object.hash(ownerId, packsPulledUntil, entriesPulledUntil, lastSyncedAt);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is SyncStateRow &&
+          other.ownerId == this.ownerId &&
+          other.packsPulledUntil == this.packsPulledUntil &&
+          other.entriesPulledUntil == this.entriesPulledUntil &&
+          other.lastSyncedAt == this.lastSyncedAt);
+}
+
+class SyncStatesCompanion extends UpdateCompanion<SyncStateRow> {
+  final Value<String> ownerId;
+  final Value<DateTime?> packsPulledUntil;
+  final Value<DateTime?> entriesPulledUntil;
+  final Value<DateTime?> lastSyncedAt;
+  final Value<int> rowid;
+  const SyncStatesCompanion({
+    this.ownerId = const Value.absent(),
+    this.packsPulledUntil = const Value.absent(),
+    this.entriesPulledUntil = const Value.absent(),
+    this.lastSyncedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  SyncStatesCompanion.insert({
+    required String ownerId,
+    this.packsPulledUntil = const Value.absent(),
+    this.entriesPulledUntil = const Value.absent(),
+    this.lastSyncedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : ownerId = Value(ownerId);
+  static Insertable<SyncStateRow> custom({
+    Expression<String>? ownerId,
+    Expression<DateTime>? packsPulledUntil,
+    Expression<DateTime>? entriesPulledUntil,
+    Expression<DateTime>? lastSyncedAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (ownerId != null) 'owner_id': ownerId,
+      if (packsPulledUntil != null) 'packs_pulled_until': packsPulledUntil,
+      if (entriesPulledUntil != null)
+        'entries_pulled_until': entriesPulledUntil,
+      if (lastSyncedAt != null) 'last_synced_at': lastSyncedAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  SyncStatesCompanion copyWith({
+    Value<String>? ownerId,
+    Value<DateTime?>? packsPulledUntil,
+    Value<DateTime?>? entriesPulledUntil,
+    Value<DateTime?>? lastSyncedAt,
+    Value<int>? rowid,
+  }) {
+    return SyncStatesCompanion(
+      ownerId: ownerId ?? this.ownerId,
+      packsPulledUntil: packsPulledUntil ?? this.packsPulledUntil,
+      entriesPulledUntil: entriesPulledUntil ?? this.entriesPulledUntil,
+      lastSyncedAt: lastSyncedAt ?? this.lastSyncedAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (ownerId.present) {
+      map['owner_id'] = Variable<String>(ownerId.value);
+    }
+    if (packsPulledUntil.present) {
+      map['packs_pulled_until'] = Variable<DateTime>(packsPulledUntil.value);
+    }
+    if (entriesPulledUntil.present) {
+      map['entries_pulled_until'] = Variable<DateTime>(
+        entriesPulledUntil.value,
+      );
+    }
+    if (lastSyncedAt.present) {
+      map['last_synced_at'] = Variable<DateTime>(lastSyncedAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('SyncStatesCompanion(')
+          ..write('ownerId: $ownerId, ')
+          ..write('packsPulledUntil: $packsPulledUntil, ')
+          ..write('entriesPulledUntil: $entriesPulledUntil, ')
+          ..write('lastSyncedAt: $lastSyncedAt, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -1444,6 +1905,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
   late final $LanguagePacksTable languagePacks = $LanguagePacksTable(this);
   late final $EntriesTable entries = $EntriesTable(this);
+  late final $SyncStatesTable syncStates = $SyncStatesTable(this);
   late final Index languagePacksOwnerId = Index(
     'language_packs_owner_id',
     'CREATE INDEX language_packs_owner_id ON language_packs (owner_id)',
@@ -1463,6 +1925,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   List<DatabaseSchemaEntity> get allSchemaEntities => [
     languagePacks,
     entries,
+    syncStates,
     languagePacksOwnerId,
     entriesPackCreated,
     entriesUniqueTerm,
@@ -1481,6 +1944,7 @@ typedef $$LanguagePacksTableCreateCompanionBuilder =
       required DateTime createdAt,
       required DateTime updatedAt,
       Value<DateTime?> deletedAt,
+      Value<bool> needsPush,
       Value<int> rowid,
     });
 typedef $$LanguagePacksTableUpdateCompanionBuilder =
@@ -1492,6 +1956,7 @@ typedef $$LanguagePacksTableUpdateCompanionBuilder =
       Value<DateTime> createdAt,
       Value<DateTime> updatedAt,
       Value<DateTime?> deletedAt,
+      Value<bool> needsPush,
       Value<int> rowid,
     });
 
@@ -1568,6 +2033,11 @@ class $$LanguagePacksTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
+  ColumnFilters<bool> get needsPush => $composableBuilder(
+    column: $table.needsPush,
+    builder: (column) => ColumnFilters(column),
+  );
+
   Expression<bool> entriesRefs(
     Expression<bool> Function($$EntriesTableFilterComposer f) f,
   ) {
@@ -1637,6 +2107,11 @@ class $$LanguagePacksTableOrderingComposer
     column: $table.deletedAt,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<bool> get needsPush => $composableBuilder(
+    column: $table.needsPush,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$LanguagePacksTableAnnotationComposer
@@ -1670,6 +2145,9 @@ class $$LanguagePacksTableAnnotationComposer
 
   GeneratedColumn<DateTime> get deletedAt =>
       $composableBuilder(column: $table.deletedAt, builder: (column) => column);
+
+  GeneratedColumn<bool> get needsPush =>
+      $composableBuilder(column: $table.needsPush, builder: (column) => column);
 
   Expression<T> entriesRefs<T extends Object>(
     Expression<T> Function($$EntriesTableAnnotationComposer a) f,
@@ -1732,6 +2210,7 @@ class $$LanguagePacksTableTableManager
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<DateTime> updatedAt = const Value.absent(),
                 Value<DateTime?> deletedAt = const Value.absent(),
+                Value<bool> needsPush = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => LanguagePacksCompanion(
                 id: id,
@@ -1741,6 +2220,7 @@ class $$LanguagePacksTableTableManager
                 createdAt: createdAt,
                 updatedAt: updatedAt,
                 deletedAt: deletedAt,
+                needsPush: needsPush,
                 rowid: rowid,
               ),
           createCompanionCallback:
@@ -1752,6 +2232,7 @@ class $$LanguagePacksTableTableManager
                 required DateTime createdAt,
                 required DateTime updatedAt,
                 Value<DateTime?> deletedAt = const Value.absent(),
+                Value<bool> needsPush = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => LanguagePacksCompanion.insert(
                 id: id,
@@ -1761,6 +2242,7 @@ class $$LanguagePacksTableTableManager
                 createdAt: createdAt,
                 updatedAt: updatedAt,
                 deletedAt: deletedAt,
+                needsPush: needsPush,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0
@@ -1837,6 +2319,7 @@ typedef $$EntriesTableCreateCompanionBuilder = EntriesCompanion Function({
   required String searchTerm,
   required String searchTranslations,
   required String duplicateKey,
+  Value<bool> needsPush,
   Value<int> rowid,
 });
 typedef $$EntriesTableUpdateCompanionBuilder = EntriesCompanion Function({
@@ -1857,6 +2340,7 @@ typedef $$EntriesTableUpdateCompanionBuilder = EntriesCompanion Function({
   Value<String> searchTerm,
   Value<String> searchTranslations,
   Value<String> duplicateKey,
+  Value<bool> needsPush,
   Value<int> rowid,
 });
 
@@ -1980,6 +2464,11 @@ class $$EntriesTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
+  ColumnFilters<bool> get needsPush => $composableBuilder(
+    column: $table.needsPush,
+    builder: (column) => ColumnFilters(column),
+  );
+
   $$LanguagePacksTableFilterComposer get packId {
     final $$LanguagePacksTableFilterComposer composer = $composerBuilder(
       composer: this,
@@ -2093,6 +2582,11 @@ class $$EntriesTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<bool> get needsPush => $composableBuilder(
+    column: $table.needsPush,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   $$LanguagePacksTableOrderingComposer get packId {
     final $$LanguagePacksTableOrderingComposer composer = $composerBuilder(
       composer: this,
@@ -2185,6 +2679,9 @@ class $$EntriesTableAnnotationComposer
     builder: (column) => column,
   );
 
+  GeneratedColumn<bool> get needsPush =>
+      $composableBuilder(column: $table.needsPush, builder: (column) => column);
+
   $$LanguagePacksTableAnnotationComposer get packId {
     final $$LanguagePacksTableAnnotationComposer composer = $composerBuilder(
       composer: this,
@@ -2254,6 +2751,7 @@ class $$EntriesTableTableManager
                 Value<String> searchTerm = const Value.absent(),
                 Value<String> searchTranslations = const Value.absent(),
                 Value<String> duplicateKey = const Value.absent(),
+                Value<bool> needsPush = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => EntriesCompanion(
                 id: id,
@@ -2273,6 +2771,7 @@ class $$EntriesTableTableManager
                 searchTerm: searchTerm,
                 searchTranslations: searchTranslations,
                 duplicateKey: duplicateKey,
+                needsPush: needsPush,
                 rowid: rowid,
               ),
           createCompanionCallback:
@@ -2294,6 +2793,7 @@ class $$EntriesTableTableManager
                 required String searchTerm,
                 required String searchTranslations,
                 required String duplicateKey,
+                Value<bool> needsPush = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => EntriesCompanion.insert(
                 id: id,
@@ -2313,6 +2813,7 @@ class $$EntriesTableTableManager
                 searchTerm: searchTerm,
                 searchTranslations: searchTranslations,
                 duplicateKey: duplicateKey,
+                needsPush: needsPush,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0
@@ -2381,6 +2882,200 @@ typedef $$EntriesTableProcessedTableManager =
       EntryRow,
       PrefetchHooks Function({bool packId})
     >;
+typedef $$SyncStatesTableCreateCompanionBuilder = SyncStatesCompanion Function({
+  required String ownerId,
+  Value<DateTime?> packsPulledUntil,
+  Value<DateTime?> entriesPulledUntil,
+  Value<DateTime?> lastSyncedAt,
+  Value<int> rowid,
+});
+typedef $$SyncStatesTableUpdateCompanionBuilder = SyncStatesCompanion Function({
+  Value<String> ownerId,
+  Value<DateTime?> packsPulledUntil,
+  Value<DateTime?> entriesPulledUntil,
+  Value<DateTime?> lastSyncedAt,
+  Value<int> rowid,
+});
+
+class $$SyncStatesTableFilterComposer
+    extends Composer<_$AppDatabase, $SyncStatesTable> {
+  $$SyncStatesTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get ownerId => $composableBuilder(
+    column: $table.ownerId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get packsPulledUntil => $composableBuilder(
+    column: $table.packsPulledUntil,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get entriesPulledUntil => $composableBuilder(
+    column: $table.entriesPulledUntil,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get lastSyncedAt => $composableBuilder(
+    column: $table.lastSyncedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$SyncStatesTableOrderingComposer
+    extends Composer<_$AppDatabase, $SyncStatesTable> {
+  $$SyncStatesTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get ownerId => $composableBuilder(
+    column: $table.ownerId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get packsPulledUntil => $composableBuilder(
+    column: $table.packsPulledUntil,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get entriesPulledUntil => $composableBuilder(
+    column: $table.entriesPulledUntil,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get lastSyncedAt => $composableBuilder(
+    column: $table.lastSyncedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$SyncStatesTableAnnotationComposer
+    extends Composer<_$AppDatabase, $SyncStatesTable> {
+  $$SyncStatesTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get ownerId =>
+      $composableBuilder(column: $table.ownerId, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get packsPulledUntil => $composableBuilder(
+    column: $table.packsPulledUntil,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get entriesPulledUntil => $composableBuilder(
+    column: $table.entriesPulledUntil,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get lastSyncedAt => $composableBuilder(
+    column: $table.lastSyncedAt,
+    builder: (column) => column,
+  );
+}
+
+class $$SyncStatesTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $SyncStatesTable,
+          SyncStateRow,
+          $$SyncStatesTableFilterComposer,
+          $$SyncStatesTableOrderingComposer,
+          $$SyncStatesTableAnnotationComposer,
+          $$SyncStatesTableCreateCompanionBuilder,
+          $$SyncStatesTableUpdateCompanionBuilder,
+          (
+            SyncStateRow,
+            BaseReferences<_$AppDatabase, $SyncStatesTable, SyncStateRow>,
+          ),
+          SyncStateRow,
+          PrefetchHooks Function()
+        > {
+  $$SyncStatesTableTableManager(_$AppDatabase db, $SyncStatesTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$SyncStatesTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$SyncStatesTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$SyncStatesTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> ownerId = const Value.absent(),
+                Value<DateTime?> packsPulledUntil = const Value.absent(),
+                Value<DateTime?> entriesPulledUntil = const Value.absent(),
+                Value<DateTime?> lastSyncedAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => SyncStatesCompanion(
+                ownerId: ownerId,
+                packsPulledUntil: packsPulledUntil,
+                entriesPulledUntil: entriesPulledUntil,
+                lastSyncedAt: lastSyncedAt,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String ownerId,
+                Value<DateTime?> packsPulledUntil = const Value.absent(),
+                Value<DateTime?> entriesPulledUntil = const Value.absent(),
+                Value<DateTime?> lastSyncedAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => SyncStatesCompanion.insert(
+                ownerId: ownerId,
+                packsPulledUntil: packsPulledUntil,
+                entriesPulledUntil: entriesPulledUntil,
+                lastSyncedAt: lastSyncedAt,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable<$SyncStatesTable, SyncStateRow>(table),
+                  BaseReferences<_$AppDatabase, $SyncStatesTable, SyncStateRow>(
+                    db,
+                    table,
+                    e,
+                  ),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$SyncStatesTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $SyncStatesTable,
+      SyncStateRow,
+      $$SyncStatesTableFilterComposer,
+      $$SyncStatesTableOrderingComposer,
+      $$SyncStatesTableAnnotationComposer,
+      $$SyncStatesTableCreateCompanionBuilder,
+      $$SyncStatesTableUpdateCompanionBuilder,
+      (
+        SyncStateRow,
+        BaseReferences<_$AppDatabase, $SyncStatesTable, SyncStateRow>,
+      ),
+      SyncStateRow,
+      PrefetchHooks Function()
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -2389,4 +3084,6 @@ class $AppDatabaseManager {
       $$LanguagePacksTableTableManager(_db, _db.languagePacks);
   $$EntriesTableTableManager get entries =>
       $$EntriesTableTableManager(_db, _db.entries);
+  $$SyncStatesTableTableManager get syncStates =>
+      $$SyncStatesTableTableManager(_db, _db.syncStates);
 }

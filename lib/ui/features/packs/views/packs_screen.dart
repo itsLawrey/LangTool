@@ -7,6 +7,7 @@ import '../../../../routing/routes.dart';
 import '../../../../utils/result.dart';
 import '../../../core/error_message.dart';
 import '../../../core/widgets/confirm_dialog.dart';
+import '../../../core/widgets/sync_button.dart';
 import '../../../core/widgets/text_input_dialog.dart';
 import '../view_models/packs_view_model.dart';
 import 'account_menu.dart';
@@ -22,7 +23,7 @@ class PacksScreen extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Language packs'),
-        actions: const [AccountMenu()],
+        actions: const [SyncButton(), AccountMenu()],
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => _create(context, viewModel),

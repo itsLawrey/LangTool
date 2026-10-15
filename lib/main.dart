@@ -6,10 +6,14 @@ import 'app.dart';
 import 'config/app_config.dart';
 import 'data/local/app_database.dart';
 import 'data/local/connection.dart';
+import 'data/local/sync_store.dart';
 import 'data/repositories/auth_repository.dart';
 import 'data/repositories/entry_repository.dart';
 import 'data/repositories/language_pack_repository.dart';
+import 'data/repositories/sync_engine.dart';
+import 'data/repositories/sync_repository.dart';
 import 'data/services/auth_service.dart';
+import 'data/services/supabase_sync_api.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -33,6 +37,21 @@ Future<void> main() async {
         ),
         Provider<EntryRepository>(
           create: (_) => LocalEntryRepository(database),
+        ),
+        ChangeNotifierProvider(
+          lazy: false,
+          create: (context) {
+            final store = LocalSyncStore(database);
+            return SyncRepository(
+              engine: SyncEngine(
+                api: SupabaseSyncApi(Supabase.instance.client),
+                store: store,
+              ),
+              store: store,
+              auth: context.read<AuthRepository>(),
+              database: database,
+            );
+          },
         ),
       ],
       child: const LangToolApp(),

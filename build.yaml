@@ -9,3 +9,9 @@ targets:
         options:
           # ISO-8601 text keeps the UTC offset, unlike the default Unix seconds.
           store_date_time_values_as_text: true
+          # Schema snapshots and generated migration steps/tests
+          # (`dart run drift_dev make-migrations`).
+          databases:
+            app_database: lib/data/local/app_database.dart
+          schema_dir: drift_schemas/
+          test_dir: test/drift/

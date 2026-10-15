@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
 import '../../../../routing/routes.dart';
+import '../../../core/widgets/sync_button.dart';
 import '../view_models/timeline_view_model.dart';
 import 'entry_search_bar.dart';
 import 'timeline_list.dart';
@@ -22,7 +23,10 @@ class TimelineScreen extends StatelessWidget {
     }
 
     return Scaffold(
-      appBar: AppBar(title: Text(viewModel.pack?.name ?? '')),
+      appBar: AppBar(
+        title: Text(viewModel.pack?.name ?? ''),
+        actions: const [SyncButton()],
+      ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => context.push(Routes.newEntry(viewModel.packId)),
         icon: const Icon(Icons.add),

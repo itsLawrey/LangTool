@@ -55,3 +55,6 @@ app.*.map.json
 
 # Claude Code machine-local settings
 .claude/settings.local.json
+
+# Local-only notes (service inventory, setup records)
+*.local.md

@@ -108,13 +108,23 @@ class LocalLanguagePackRepository implements LanguagePackRepository {
         await (_db.update(
           _db.languagePacks,
         )..where((p) => p.id.equals(id) & p.deletedAt.isNull())).write(
-          LanguagePacksCompanion(deletedAt: Value(now), updatedAt: Value(now)),
+          LanguagePacksCompanion(
+            deletedAt: Value(now),
+            updatedAt: Value(now),
+            needsPush: const Value(true),
+          ),
         );
     if (updated == 0) return Result.error(NotFoundException(id));
 
-    await (_db.update(_db.entries)
-          ..where((e) => e.packId.equals(id) & e.deletedAt.isNull()))
-        .write(EntriesCompanion(deletedAt: Value(now), updatedAt: Value(now)));
+    await (_db.update(
+      _db.entries,
+    )..where((e) => e.packId.equals(id) & e.deletedAt.isNull())).write(
+      EntriesCompanion(
+        deletedAt: Value(now),
+        updatedAt: Value(now),
+        needsPush: const Value(true),
+      ),
+    );
     return const Result.ok(null);
   });
 }

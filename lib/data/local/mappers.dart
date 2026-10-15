@@ -22,15 +22,18 @@ extension LanguagePackRowMapping on LanguagePackRow {
 }
 
 extension LanguagePackMapping on LanguagePack {
-  LanguagePacksCompanion toCompanion() => LanguagePacksCompanion.insert(
-    id: id,
-    ownerId: ownerId,
-    name: name,
-    languageCode: languageCode,
-    createdAt: createdAt,
-    updatedAt: updatedAt,
-    deletedAt: Value(deletedAt),
-  );
+  /// [needsPush] is false only for rows applied from the server.
+  LanguagePacksCompanion toCompanion({bool needsPush = true}) =>
+      LanguagePacksCompanion.insert(
+        id: id,
+        ownerId: ownerId,
+        name: name,
+        languageCode: languageCode,
+        createdAt: createdAt,
+        updatedAt: updatedAt,
+        deletedAt: Value(deletedAt),
+        needsPush: Value(needsPush),
+      );
 }
 
 extension EntryRowMapping on EntryRow {
@@ -54,25 +57,28 @@ extension EntryRowMapping on EntryRow {
 
 extension EntryMapping on Entry {
   /// Includes the derived search and duplicate-detection columns.
-  EntriesCompanion toCompanion() => EntriesCompanion.insert(
-    id: id,
-    ownerId: ownerId,
-    packId: packId,
-    wordType: wordType,
-    term: term,
-    forms: forms,
-    translations: translations,
-    examples: examples,
-    tags: tags,
-    notes: Value(notes),
-    schemaVersion: schemaVersion,
-    createdAt: createdAt,
-    updatedAt: updatedAt,
-    deletedAt: Value(deletedAt),
-    searchTerm: normalizeForSearch(term),
-    searchTranslations: translations
-        .map(normalizeForSearch)
-        .join(translationSeparator),
-    duplicateKey: duplicateKey(term),
-  );
+  /// [needsPush] is false only for rows applied from the server.
+  EntriesCompanion toCompanion({bool needsPush = true}) =>
+      EntriesCompanion.insert(
+        id: id,
+        ownerId: ownerId,
+        packId: packId,
+        wordType: wordType,
+        term: term,
+        forms: forms,
+        translations: translations,
+        examples: examples,
+        tags: tags,
+        notes: Value(notes),
+        schemaVersion: schemaVersion,
+        createdAt: createdAt,
+        updatedAt: updatedAt,
+        deletedAt: Value(deletedAt),
+        searchTerm: normalizeForSearch(term),
+        searchTranslations: translations
+            .map(normalizeForSearch)
+            .join(translationSeparator),
+        duplicateKey: duplicateKey(term),
+        needsPush: Value(needsPush),
+      );
 }
