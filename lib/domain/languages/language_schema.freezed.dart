@@ -56,10 +56,11 @@ extension ValidationIssuePatterns on ValidationIssue {
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeMap<TResult extends Object?>({TResult Function( UnsupportedWordType value)?  unsupportedWordType,TResult Function( MissingRequiredField value)?  missingRequiredField,TResult Function( UnknownField value)?  unknownField,TResult Function( DisallowedValue value)?  disallowedValue,required TResult orElse(),}){
+@optionalTypeArgs TResult maybeMap<TResult extends Object?>({TResult Function( BlankTerm value)?  blankTerm,TResult Function( UnsupportedWordType value)?  unsupportedWordType,TResult Function( MissingRequiredField value)?  missingRequiredField,TResult Function( UnknownField value)?  unknownField,TResult Function( DisallowedValue value)?  disallowedValue,required TResult orElse(),}){
 final _that = this;
 switch (_that) {
-case UnsupportedWordType() when unsupportedWordType != null:
+case BlankTerm() when blankTerm != null:
+return blankTerm(_that);case UnsupportedWordType() when unsupportedWordType != null:
 return unsupportedWordType(_that);case MissingRequiredField() when missingRequiredField != null:
 return missingRequiredField(_that);case UnknownField() when unknownField != null:
 return unknownField(_that);case DisallowedValue() when disallowedValue != null:
@@ -81,10 +82,11 @@ return disallowedValue(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult map<TResult extends Object?>({required TResult Function( UnsupportedWordType value)  unsupportedWordType,required TResult Function( MissingRequiredField value)  missingRequiredField,required TResult Function( UnknownField value)  unknownField,required TResult Function( DisallowedValue value)  disallowedValue,}){
+@optionalTypeArgs TResult map<TResult extends Object?>({required TResult Function( BlankTerm value)  blankTerm,required TResult Function( UnsupportedWordType value)  unsupportedWordType,required TResult Function( MissingRequiredField value)  missingRequiredField,required TResult Function( UnknownField value)  unknownField,required TResult Function( DisallowedValue value)  disallowedValue,}){
 final _that = this;
 switch (_that) {
-case UnsupportedWordType():
+case BlankTerm():
+return blankTerm(_that);case UnsupportedWordType():
 return unsupportedWordType(_that);case MissingRequiredField():
 return missingRequiredField(_that);case UnknownField():
 return unknownField(_that);case DisallowedValue():
@@ -102,10 +104,11 @@ return disallowedValue(_that);}
 /// }
 /// ```
 
-@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>({TResult? Function( UnsupportedWordType value)?  unsupportedWordType,TResult? Function( MissingRequiredField value)?  missingRequiredField,TResult? Function( UnknownField value)?  unknownField,TResult? Function( DisallowedValue value)?  disallowedValue,}){
+@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>({TResult? Function( BlankTerm value)?  blankTerm,TResult? Function( UnsupportedWordType value)?  unsupportedWordType,TResult? Function( MissingRequiredField value)?  missingRequiredField,TResult? Function( UnknownField value)?  unknownField,TResult? Function( DisallowedValue value)?  disallowedValue,}){
 final _that = this;
 switch (_that) {
-case UnsupportedWordType() when unsupportedWordType != null:
+case BlankTerm() when blankTerm != null:
+return blankTerm(_that);case UnsupportedWordType() when unsupportedWordType != null:
 return unsupportedWordType(_that);case MissingRequiredField() when missingRequiredField != null:
 return missingRequiredField(_that);case UnknownField() when unknownField != null:
 return unknownField(_that);case DisallowedValue() when disallowedValue != null:
@@ -126,9 +129,10 @@ return disallowedValue(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>({TResult Function( WordType wordType)?  unsupportedWordType,TResult Function( String key)?  missingRequiredField,TResult Function( String key)?  unknownField,TResult Function( String key,  String value)?  disallowedValue,required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>({TResult Function()?  blankTerm,TResult Function( WordType wordType)?  unsupportedWordType,TResult Function( String key)?  missingRequiredField,TResult Function( String key)?  unknownField,TResult Function( String key,  String value)?  disallowedValue,required TResult orElse(),}) {final _that = this;
 switch (_that) {
-case UnsupportedWordType() when unsupportedWordType != null:
+case BlankTerm() when blankTerm != null:
+return blankTerm();case UnsupportedWordType() when unsupportedWordType != null:
 return unsupportedWordType(_that.wordType);case MissingRequiredField() when missingRequiredField != null:
 return missingRequiredField(_that.key);case UnknownField() when unknownField != null:
 return unknownField(_that.key);case DisallowedValue() when disallowedValue != null:
@@ -150,9 +154,10 @@ return disallowedValue(_that.key,_that.value);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>({required TResult Function( WordType wordType)  unsupportedWordType,required TResult Function( String key)  missingRequiredField,required TResult Function( String key)  unknownField,required TResult Function( String key,  String value)  disallowedValue,}) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>({required TResult Function()  blankTerm,required TResult Function( WordType wordType)  unsupportedWordType,required TResult Function( String key)  missingRequiredField,required TResult Function( String key)  unknownField,required TResult Function( String key,  String value)  disallowedValue,}) {final _that = this;
 switch (_that) {
-case UnsupportedWordType():
+case BlankTerm():
+return blankTerm();case UnsupportedWordType():
 return unsupportedWordType(_that.wordType);case MissingRequiredField():
 return missingRequiredField(_that.key);case UnknownField():
 return unknownField(_that.key);case DisallowedValue():
@@ -170,9 +175,10 @@ return disallowedValue(_that.key,_that.value);}
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>({TResult? Function( WordType wordType)?  unsupportedWordType,TResult? Function( String key)?  missingRequiredField,TResult? Function( String key)?  unknownField,TResult? Function( String key,  String value)?  disallowedValue,}) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>({TResult? Function()?  blankTerm,TResult? Function( WordType wordType)?  unsupportedWordType,TResult? Function( String key)?  missingRequiredField,TResult? Function( String key)?  unknownField,TResult? Function( String key,  String value)?  disallowedValue,}) {final _that = this;
 switch (_that) {
-case UnsupportedWordType() when unsupportedWordType != null:
+case BlankTerm() when blankTerm != null:
+return blankTerm();case UnsupportedWordType() when unsupportedWordType != null:
 return unsupportedWordType(_that.wordType);case MissingRequiredField() when missingRequiredField != null:
 return missingRequiredField(_that.key);case UnknownField() when unknownField != null:
 return unknownField(_that.key);case DisallowedValue() when disallowedValue != null:
@@ -183,6 +189,38 @@ return disallowedValue(_that.key,_that.value);case _:
 }
 
 }
+
+/// @nodoc
+
+
+class BlankTerm implements ValidationIssue {
+  const BlankTerm();
+  
+
+
+
+
+
+
+@override
+bool operator ==(Object other) {
+    return identical(this, other) || (other.runtimeType == runtimeType&&other is BlankTerm);
+}
+
+
+@override
+int get hashCode => runtimeType.hashCode;
+
+@override
+String toString() {
+    return 'ValidationIssue.blankTerm()';
+}
+
+
+}
+
+
+
 
 /// @nodoc
 

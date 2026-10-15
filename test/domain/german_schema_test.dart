@@ -86,6 +86,12 @@ void main() {
     ]);
   });
 
+  test('blank term reports blank term', () {
+    expect(german.validate(_entry(WordType.adverb, '  ')), [
+      const ValidationIssue.blankTerm(),
+    ]);
+  });
+
   test('word type missing from schema reports unsupported word type', () {
     const schema = LanguageSchema(code: 'xx', version: 1, wordTypes: {});
 

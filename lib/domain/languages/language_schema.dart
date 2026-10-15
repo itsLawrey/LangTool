@@ -21,15 +21,18 @@ class LanguageSchema {
   final int version;
   final Map<WordType, WordTypeSchema> wordTypes;
 
-  /// Returns every issue with [entry]'s word type and forms. An empty list
-  /// means the entry is valid.
+  /// Returns every issue with [entry]'s term, word type and forms. An empty
+  /// list means the entry is valid.
   List<ValidationIssue> validate(Entry entry) {
+    final issues = <ValidationIssue>[
+      if (entry.term.trim().isEmpty) const ValidationIssue.blankTerm(),
+    ];
+
     final typeSchema = wordTypes[entry.wordType];
     if (typeSchema == null) {
-      return [ValidationIssue.unsupportedWordType(entry.wordType)];
+      return [...issues, ValidationIssue.unsupportedWordType(entry.wordType)];
     }
 
-    final issues = <ValidationIssue>[];
     final fieldsByKey = {for (final f in typeSchema.fields) f.key: f};
 
     for (final field in typeSchema.fields) {
@@ -74,6 +77,7 @@ class FieldDefinition {
 /// A problem found by [LanguageSchema.validate].
 @freezed
 sealed class ValidationIssue with _$ValidationIssue {
+  const factory ValidationIssue.blankTerm() = BlankTerm;
   const factory ValidationIssue.unsupportedWordType(WordType wordType) =
       UnsupportedWordType;
   const factory ValidationIssue.missingRequiredField(String key) =

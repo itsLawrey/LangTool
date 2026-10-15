@@ -5,3 +5,7 @@ targets:
         options:
           field_rename: snake
           explicit_to_json: true
+      drift_dev:
+        options:
+          # ISO-8601 text keeps the UTC offset, unlike the default Unix seconds.
+          store_date_time_values_as_text: true
