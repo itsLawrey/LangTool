@@ -17,7 +17,18 @@ flutter test                          # all tests
 flutter test test/widget_test.dart    # single file
 flutter test --name "<test name>"     # single test by name
 dart format .
+dart run build_runner build --delete-conflicting-outputs   # regenerate *.freezed.dart / *.g.dart
 ```
+
+Generated files are committed. Re-run build_runner after changing any `@freezed` class.
+
+## Architecture
+
+Layered per Flutter's official architecture guide. So far there's only the domain layer:
+
+- `lib/domain/models/`: immutable `freezed` models: `Profile` → `LanguagePack` → `Entry`. They're storage-agnostic, with JSON only (snake_case keys via `build.yaml`, matching Postgres columns). Every synced record has a client-generated UUID `id`, UTC `createdAt`/`updatedAt` and a nullable `deletedAt` (soft delete, so deletions sync). Packs and entries carry `ownerId`.
+- `lib/domain/languages/`: language-specific grammar. An `Entry` stores a `term` (headword) plus a free-form `forms` map. A `LanguageSchema` (e.g. `german.dart`) declares, per `WordType`, which form keys exist, whether they're required and their allowed values, and validates entries against that. Adding a language means adding a schema and registering it in `language_registry.dart`, with no model changes. Bump the schema `version` when its fields change; entries record the version they were written against in `schemaVersion`.
+- No UI strings (e.g. field labels) belong in the domain layer.
 
 ## Supabase
 
