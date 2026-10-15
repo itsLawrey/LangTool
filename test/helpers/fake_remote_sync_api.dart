@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:langtool/data/services/remote_sync_api.dart';
 import 'package:langtool/domain/models/entry.dart';
 import 'package:langtool/domain/models/language_pack.dart';
@@ -10,16 +12,37 @@ class FakeRemoteSyncApi implements RemoteSyncApi {
   final packs = <String, RemoteRecord<LanguagePack>>{};
   final entries = <String, RemoteRecord<Entry>>{};
 
-  /// When set, every call throws it.
+  /// When set, calls throw it: every call, or only the operations named in
+  /// [failingOperations] (`upsertPacks`, `upsertEntries`, `fetchPacks`,
+  /// `fetchEntries`) if that is not empty.
   Exception? failure;
+  final failingOperations = <String>{};
+
+  /// When set, [fetchPacks] waits for it, so a sync can be held mid-run.
+  Completer<void>? fetchPacksGate;
+
+  /// Number of [fetchPacks] calls; one per sync for small data sets.
+  var fetchPacksCalls = 0;
 
   var _tick = 0;
   DateTime _serverNow() =>
       DateTime.utc(2030).add(Duration(microseconds: _tick++));
 
+  /// The server time of the latest accepted write.
+  DateTime get latestServerTime =>
+      DateTime.utc(2030).add(Duration(microseconds: _tick - 1));
+
+  /// Stores [entry] as if written at [serverTime], bypassing the write rules
+  /// (e.g. to simulate a late commit or a missing pack).
+  void putEntry(Entry entry, DateTime serverTime) =>
+      entries[entry.id] = RemoteRecord(entry, serverTime);
+
+  void putPack(LanguagePack pack, DateTime serverTime) =>
+      packs[pack.id] = RemoteRecord(pack, serverTime);
+
   @override
   Future<void> upsertPacks(List<LanguagePack> packs) async {
-    _maybeFail();
+    _maybeFail('upsertPacks');
     for (final pack in packs) {
       final existing = this.packs[pack.id]?.value;
       if (existing != null && pack.updatedAt.isBefore(existing.updatedAt)) {
@@ -39,7 +62,7 @@ class FakeRemoteSyncApi implements RemoteSyncApi {
 
   @override
   Future<void> upsertEntries(List<Entry> entries) async {
-    _maybeFail();
+    _maybeFail('upsertEntries');
     for (final entry in entries) {
       if (!packs.containsKey(entry.packId)) {
         throw StateError('Foreign key violation: pack ${entry.packId}');
@@ -66,7 +89,9 @@ class FakeRemoteSyncApi implements RemoteSyncApi {
     required ChangeCursor? from,
     required int limit,
   }) async {
-    _maybeFail();
+    fetchPacksCalls++;
+    await fetchPacksGate?.future;
+    _maybeFail('fetchPacks');
     return _page(
       packs.values,
       (p) => p.ownerId == ownerId,
@@ -82,7 +107,7 @@ class FakeRemoteSyncApi implements RemoteSyncApi {
     required ChangeCursor? from,
     required int limit,
   }) async {
-    _maybeFail();
+    _maybeFail('fetchEntries');
     return _page(
       entries.values,
       (e) => e.ownerId == ownerId,
@@ -117,7 +142,11 @@ class FakeRemoteSyncApi implements RemoteSyncApi {
     return matching.take(limit).toList();
   }
 
-  void _maybeFail() {
-    if (failure case final error?) throw error;
+  void _maybeFail(String operation) {
+    if (failure case final error?
+        when failingOperations.isEmpty ||
+            failingOperations.contains(operation)) {
+      throw error;
+    }
   }
 }

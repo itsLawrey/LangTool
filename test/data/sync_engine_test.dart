@@ -1,41 +1,13 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:langtool/data/local/sync_store.dart';
-import 'package:langtool/data/repositories/sync_engine.dart';
 import 'package:langtool/domain/exceptions.dart';
 import 'package:langtool/domain/models/entry.dart';
-import 'package:langtool/domain/models/language_pack.dart';
 import 'package:langtool/domain/models/word_type.dart';
 import 'package:langtool/utils/result.dart';
 
 import '../helpers/fake_remote_sync_api.dart';
-import '../helpers/test_repositories.dart';
+import '../helpers/sync_device.dart';
 
 const _owner = 'user-1';
-
-/// One app installation: its own database, sharing [server] with others.
-class _Device {
-  _Device(String name, FakeRemoteSyncApi server, {int pageSize = 500})
-    : repos = TestRepositories(idPrefix: name) {
-    store = LocalSyncStore(repos.db, clock: repos.clock);
-    engine = SyncEngine(
-      api: server,
-      store: store,
-      pageSize: pageSize,
-      clock: repos.clock,
-    );
-  }
-
-  final TestRepositories repos;
-  late final LocalSyncStore store;
-  late final SyncEngine engine;
-
-  Future<void> sync() => engine.run(_owner);
-
-  Future<List<Entry>> entries(String packId) =>
-      repos.entries.watchEntries(packId).first;
-
-  Future<List<LanguagePack>> packs() => repos.packs.watchPacks(_owner).first;
-}
 
 T _ok<T>(Result<T> result) => switch (result) {
   Ok(:final value) => value,
@@ -44,18 +16,18 @@ T _ok<T>(Result<T> result) => switch (result) {
 
 void main() {
   late FakeRemoteSyncApi server;
-  late _Device a;
-  late _Device b;
+  late SyncDevice a;
+  late SyncDevice b;
 
   setUp(() {
     server = FakeRemoteSyncApi();
-    a = _Device('a', server);
-    b = _Device('b', server);
+    a = SyncDevice('a', server);
+    b = SyncDevice('b', server);
   });
 
   tearDown(() async {
-    await a.repos.close();
-    await b.repos.close();
+    await a.close();
+    await b.close();
   });
 
   test('uploads local data and downloads it on another device', () async {
@@ -155,7 +127,7 @@ void main() {
   }
 
   test('pages through large change sets', () async {
-    final small = _Device('c', server, pageSize: 2);
+    final small = SyncDevice('c', server, pageSize: 2);
     final pack = await a.repos.createPack();
     for (var i = 0; i < 5; i++) {
       await a.repos.addNoun(pack, 'Wort$i');
@@ -165,7 +137,7 @@ void main() {
     await small.sync();
 
     expect(await small.entries(pack.id), hasLength(5));
-    await small.repos.close();
+    await small.close();
   });
 
   test('later syncs pick up further changes', () async {

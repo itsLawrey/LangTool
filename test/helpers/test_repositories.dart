@@ -31,9 +31,11 @@ class TestRepositories {
   DateTime clock() => now = now.add(const Duration(seconds: 1));
   String newId() => '$idPrefix-${(_nextId++).toString().padLeft(4, '0')}';
 
-  Future<LanguagePack> createPack([String name = 'Deutsch']) async => _ok(
-    await packs.create(ownerId: 'user-1', name: name, languageCode: 'de'),
-  );
+  Future<LanguagePack> createPack([
+    String name = 'Deutsch',
+    String ownerId = 'user-1',
+  ]) async =>
+      _ok(await packs.create(ownerId: ownerId, name: name, languageCode: 'de'));
 
   Future<Entry> addNoun(
     LanguagePack pack,

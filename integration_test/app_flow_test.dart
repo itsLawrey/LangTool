@@ -1,0 +1,186 @@
+import 'package:drift/native.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:integration_test/integration_test.dart';
+import 'package:langtool/app_scope.dart';
+import 'package:langtool/data/local/app_database.dart';
+
+import '../test/helpers/fake_auth_service.dart';
+import '../test/helpers/fake_remote_sync_api.dart';
+
+/// End-to-end flows through the real app on a device (run with
+/// `flutter test integration_test -d linux`). Sign-in and the cloud are
+/// faked; everything else (UI, routing, view models, database, sync engine)
+/// is the production code.
+void main() {
+  IntegrationTestWidgetsFlutterBinding.ensureInitialized();
+
+  late AppDatabase database;
+  late FakeAuthService auth;
+  late FakeRemoteSyncApi server;
+
+  setUp(() {
+    database = AppDatabase(NativeDatabase.memory());
+    auth = FakeAuthService();
+    server = FakeRemoteSyncApi();
+  });
+
+  /// Waits for real time to pass; `pumpAndSettle` would wait forever on the
+  /// sync spinner while a sync runs.
+  Future<void> wait(WidgetTester tester, [int steps = 10]) async {
+    for (var i = 0; i < steps; i++) {
+      await tester.pump(const Duration(milliseconds: 100));
+    }
+  }
+
+  Future<void> tapText(WidgetTester tester, String text) async {
+    await tester.tap(find.text(text).last);
+    await wait(tester);
+  }
+
+  Future<void> enter(WidgetTester tester, String label, String text) =>
+      tester.enterText(find.widgetWithText(TextField, label).first, text);
+
+  Future<void> addNoun(
+    WidgetTester tester,
+    String term,
+    String translation,
+  ) async {
+    await tapText(tester, 'New entry');
+    await enter(tester, 'Term', term);
+    await tapText(tester, 'Article');
+    await tapText(tester, 'das');
+    await enter(tester, 'Translation', translation);
+    await tester.tap(find.widgetWithText(FilledButton, 'Save'));
+    await wait(tester);
+  }
+
+  testWidgets('sign in, build a pack, search, edit, delete, sync', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      AppScope(
+        dependencies: AppDependencies(
+          database: database,
+          authService: auth,
+          syncApi: server,
+        ),
+      ),
+    );
+    await wait(tester);
+
+    // Sign in.
+    await enter(tester, 'Email', 'lorand@example.com');
+    await enter(tester, 'Password', 'secret1');
+    await tester.tap(find.widgetWithText(FilledButton, 'Sign in'));
+    await wait(tester);
+    expect(find.text('Language packs'), findsOneWidget);
+
+    // Create and open a pack.
+    await tapText(tester, 'New pack');
+    await tester.enterText(find.byType(TextField), 'Alltag');
+    await tapText(tester, 'Create');
+    await tapText(tester, 'Alltag');
+    expect(find.text('No entries yet.'), findsOneWidget);
+
+    // Add entries; a typo of an existing word asks first.
+    await addNoun(tester, 'Haus', 'house');
+    expect(find.text('Today'), findsOneWidget);
+    expect(find.text('das Haus'), findsOneWidget);
+
+    await addNoun(tester, 'Hasu', 'typo');
+    expect(find.text('Similar entries exist'), findsOneWidget);
+    await tapText(tester, 'Cancel');
+    await tester.pageBack();
+    await wait(tester);
+    await addNoun(tester, 'Auto', 'car');
+    expect(find.text('das Auto'), findsOneWidget);
+
+    // Search by translation.
+    await tester.enterText(find.byType(SearchBar), 'car');
+    await wait(tester, 5);
+    expect(find.text('das Auto'), findsOneWidget);
+    expect(find.text('das Haus'), findsNothing);
+    await tester.tap(find.byTooltip('Clear'));
+    await wait(tester, 5);
+    expect(find.text('das Haus'), findsOneWidget);
+
+    // Edit from the detail view.
+    await tapText(tester, 'das Haus');
+    await tester.tap(find.byTooltip('Edit'));
+    await wait(tester);
+    await enter(tester, 'Notes', 'neuter');
+    await tester.tap(find.widgetWithText(FilledButton, 'Save'));
+    await wait(tester);
+    expect(find.text('neuter'), findsOneWidget);
+
+    // Delete it.
+    await tester.tap(find.byTooltip('Delete'));
+    await wait(tester, 5);
+    await tester.tap(find.widgetWithText(FilledButton, 'Delete'));
+    await wait(tester);
+    expect(find.text('das Haus'), findsNothing);
+    expect(find.text('das Auto'), findsOneWidget);
+
+    // Sync uploads everything, including the deletion.
+    await tester.tap(find.byType(IconButton).last);
+    await wait(tester, 20);
+    expect(find.byIcon(Icons.cloud_done), findsOneWidget);
+    final serverTerms = {
+      for (final r in server.entries.values)
+        r.value.term: r.value.deletedAt != null,
+    };
+    expect(serverTerms, {'Haus': true, 'Auto': false});
+
+    await tester.pumpWidget(const SizedBox());
+    await database.close();
+  });
+
+  testWidgets('a second device signs in and gets the data', (tester) async {
+    // Device one already uploaded a pack with an entry.
+    final first = AppDatabase(NativeDatabase.memory());
+    final firstAuth = FakeAuthService()..emitSignedIn();
+    await tester.pumpWidget(
+      AppScope(
+        dependencies: AppDependencies(
+          database: first,
+          authService: firstAuth,
+          syncApi: server,
+        ),
+      ),
+    );
+    await wait(tester);
+    await tapText(tester, 'New pack');
+    await tester.enterText(find.byType(TextField), 'Reise');
+    await tapText(tester, 'Create');
+    await tapText(tester, 'Reise');
+    await addNoun(tester, 'Ticket', 'ticket');
+    await wait(tester, 40); // Upload after the edit debounce.
+    await tester.pumpWidget(const SizedBox());
+    await first.close();
+    expect(server.entries, hasLength(1));
+
+    // Device two starts empty and signs in.
+    await tester.pumpWidget(
+      AppScope(
+        key: UniqueKey(),
+        dependencies: AppDependencies(
+          database: database,
+          authService: auth,
+          syncApi: server,
+        ),
+      ),
+    );
+    await wait(tester);
+    await enter(tester, 'Email', 'lorand@example.com');
+    await enter(tester, 'Password', 'secret1');
+    await tester.tap(find.widgetWithText(FilledButton, 'Sign in'));
+    await wait(tester, 20);
+
+    await tapText(tester, 'Reise');
+    expect(find.text('das Ticket'), findsOneWidget);
+
+    await tester.pumpWidget(const SizedBox());
+    await database.close();
+  });
+}

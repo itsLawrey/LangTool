@@ -17,6 +17,8 @@ flutter analyze
 flutter test                          # all tests
 flutter test test/widget_test.dart    # single file
 flutter test --name "<test name>"     # single test by name
+flutter test --coverage               # writes coverage/lcov.info
+flutter test integration_test -d linux   # end-to-end flows (opens a window)
 dart format .
 dart run build_runner build --delete-conflicting-outputs   # regenerate *.freezed.dart / *.g.dart
 ```
@@ -67,7 +69,28 @@ Layered per Flutter's official architecture guide (MVVM with `provider` and `go_
   - `search` runs a SQL `LIKE` on the normalized columns for direct matches. Only if there are none, it scores a lightweight `(id, keys)` projection in Dart for fuzzy matches.
   - Deletes are soft. Deleting a pack soft-deletes its entries.
   - Clock and id generator are injectable (`lib/utils/clock.dart`; ids are UUID v7).
-- Tests use an in-memory DB: `AppDatabase(NativeDatabase.memory())`. `test/helpers/` has `TestRepositories`, which provides repositories over an in-memory DB with a controllable clock, and `FakeRemoteSyncApi`, which mirrors the server write rules.
+- Tests use an in-memory DB: `AppDatabase(NativeDatabase.memory())`.
+
+## Testing
+
+- **Layout:**
+  - `test/domain` and `test/data`: logic, repositories, sync and the Supabase adapter contract;
+  - `test/ui`: view models and messages;
+  - `test/widget`: screens;
+  - `test/drift`: generated schema-migration tests;
+  - `integration_test/`: end-to-end on a real device, with faked auth and cloud.
+- **`test/helpers/`:**
+  - `TestRepositories`: repositories over an in-memory DB, with a controllable clock and per-device id prefixes;
+  - `FakeRemoteSyncApi`: the server write rules (last write wins, server timestamps, FK on entries). It can fail specific operations, hold `fetchPacks` with a gate, and place rows at chosen server times;
+  - `SyncDevice`: one simulated installation;
+  - `FakeAuthService`: sign-in controlled by the test;
+  - `widget_harness.dart`: `pumpRoutes`, `signedInProviders`, `settle`, `disposeAndClose`, `useTallWindow`.
+- **Widget tests with drift:**
+  - Run DB setup and assertions inside `tester.runAsync`. Drift needs real asynchrony.
+  - Use `settle(tester)`, not `pumpAndSettle`. Progress indicators (the sync spinner, the timeline's load-more row) keep animating, so `pumpAndSettle` would never return.
+  - Finish with `disposeAndClose(tester, db)`. It flushes drift's stream clean-up timers, which run on the fake clock, before closing; otherwise the test hangs on shutdown.
+- **`SupabaseSyncApi` is tested against a `MockClient`** that pins the exact PostgREST requests and real-shaped responses. The responses must carry the `request`, which the postgrest client reads back.
+- **Google sign-in on desktop** (`loopback_oauth.dart`): `receiveOAuthRedirect` is tested with a real local server on port 0.
 
 ## Cloud sync (Supabase)
 

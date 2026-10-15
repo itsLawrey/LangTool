@@ -18,25 +18,37 @@ Future<void> signInWithOAuthViaLoopback(
   GoTrueClient auth,
   OAuthProvider provider,
 ) async {
-  final server = await HttpServer.bind(
-    InternetAddress.loopbackIPv4,
-    loopbackOAuthPort,
+  final code = await receiveOAuthRedirect(
+    open: (redirect) async {
+      final response = await auth.getOAuthSignInUrl(
+        provider: provider,
+        redirectTo: redirect.toString(),
+      );
+      final launched = await launchUrl(
+        Uri.parse(response.url),
+        mode: LaunchMode.externalApplication,
+      );
+      if (!launched) throw const AuthException('Could not open the browser.');
+    },
   );
+  await auth.exchangeCodeForSession(code);
+}
+
+/// Starts a local server, calls [open] with its redirect URL, and returns the
+/// `code` parameter of the first request to it. Throws an [AuthException] if
+/// the provider reports an error or nothing arrives within [timeout].
+Future<String> receiveOAuthRedirect({
+  required Future<void> Function(Uri redirect) open,
+  int port = loopbackOAuthPort,
+  Duration timeout = const Duration(minutes: 5),
+}) async {
+  final server = await HttpServer.bind(InternetAddress.loopbackIPv4, port);
   try {
-    final redirect = 'http://127.0.0.1:$loopbackOAuthPort$_callbackPath';
-    final response = await auth.getOAuthSignInUrl(
-      provider: provider,
-      redirectTo: redirect,
-    );
-    final launched = await launchUrl(
-      Uri.parse(response.url),
-      mode: LaunchMode.externalApplication,
-    );
-    if (!launched) throw const AuthException('Could not open the browser.');
+    await open(Uri.parse('http://127.0.0.1:${server.port}$_callbackPath'));
 
     final request = await server
         .firstWhere((r) => r.uri.path == _callbackPath)
-        .timeout(const Duration(minutes: 5));
+        .timeout(timeout);
     final params = request.uri.queryParameters;
     final code = params['code'];
 
@@ -55,7 +67,7 @@ Future<void> signInWithOAuthViaLoopback(
         params['error_description'] ?? 'Sign-in was cancelled.',
       );
     }
-    await auth.exchangeCodeForSession(code);
+    return code;
   } on TimeoutException {
     throw const AuthException('Sign-in timed out.');
   } finally {
