@@ -20,6 +20,13 @@ abstract interface class EntryRepository {
   /// Active entries of [packId], ordered by term.
   Stream<List<Entry>> watchEntries(String packId);
 
+  /// The newest [limit] active entries of [packId], newest first. Re-emits
+  /// whenever they change; grow [limit] to load further back.
+  Stream<List<Entry>> watchTimeline(String packId, {required int limit});
+
+  /// Emits whenever any entry is written.
+  Stream<void> watchChanges();
+
   Future<Result<Entry>> getEntry(String id);
 
   /// Saves a new entry. Fails with [NotFoundException] (pack),
@@ -74,6 +81,24 @@ class LocalEntryRepository implements EntryRepository {
       (rows) => [for (final row in rows) row.toDomain()],
     );
   }
+
+  @override
+  Stream<List<Entry>> watchTimeline(String packId, {required int limit}) {
+    final query = _db.select(_db.entries)
+      ..where((_) => _activeIn(packId))
+      ..orderBy([
+        (e) => OrderingTerm.desc(e.createdAt),
+        (e) => OrderingTerm.desc(e.id),
+      ])
+      ..limit(limit);
+    return query.watch().map(
+      (rows) => [for (final row in rows) row.toDomain()],
+    );
+  }
+
+  @override
+  Stream<void> watchChanges() =>
+      _db.tableUpdates(TableUpdateQuery.onTable(_db.entries));
 
   @override
   Future<Result<Entry>> getEntry(String id) async {

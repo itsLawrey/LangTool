@@ -1448,9 +1448,9 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     'language_packs_owner_id',
     'CREATE INDEX language_packs_owner_id ON language_packs (owner_id)',
   );
-  late final Index entriesPackId = Index(
-    'entries_pack_id',
-    'CREATE INDEX entries_pack_id ON entries (pack_id)',
+  late final Index entriesPackCreated = Index(
+    'entries_pack_created',
+    'CREATE INDEX entries_pack_created ON entries (pack_id, created_at)',
   );
   late final Index entriesUniqueTerm = Index(
     'entries_unique_term',
@@ -1464,7 +1464,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     languagePacks,
     entries,
     languagePacksOwnerId,
-    entriesPackId,
+    entriesPackCreated,
     entriesUniqueTerm,
   ];
   @override

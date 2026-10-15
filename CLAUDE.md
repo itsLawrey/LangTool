@@ -11,6 +11,7 @@ Development proceeds in stages defined by the user. Implement only the current s
 ## Commands
 
 ```sh
+flutter run -d linux --dart-define-from-file=env/dev.json   # app needs env/dev.json (copy env/dev.example.json)
 flutter pub get
 flutter analyze
 flutter test                          # all tests
@@ -24,7 +25,21 @@ Generated files are committed. Re-run build_runner after changing any `@freezed`
 
 ## Architecture
 
-Layered per Flutter's official architecture guide. No UI layer yet (`lib/main.dart` is still the template).
+Layered per Flutter's official architecture guide (MVVM with `provider` and `go_router`). Development focuses on Linux desktop first, then Android and web.
+
+- `lib/main.dart`: initializes Supabase from `AppConfig` (dart-defines), opens the DB and provides the repositories via `MultiProvider`.
+- `lib/routing/router.dart`: redirects to `/login` when signed out. Each `GoRoute` creates its ViewModel in a `ChangeNotifierProvider`, so it's disposed with the route. Screens read it with `context.watch`.
+- `lib/ui/features/<feature>/{view_models,views}/`: auth, packs, timeline, entry_detail and entry_form.
+  - `ui/core/` holds shared labels, display helpers, dialogs and the theme.
+  - Keep files small and split widgets into their own files.
+  - UI strings live in the UI layer: `labels.dart` (field and word-type labels, validation messages) and `error_message.dart` (maps repository exceptions).
+- Timeline: `TimelineViewModel` watches `EntryRepository.watchTimeline(limit)` and grows `limit` by `pageSize` as `TimelineList` nears the end. `ListView.builder` builds rows lazily, so both DB reads and rendering are paged. A search query switches the source to `search()` hits, still shown day-grouped and newest first. It re-runs on `watchChanges()`.
+- Entry form: the view owns the text controllers and builds an `EntryDraft`. Before saving it calls `findSimilar` and shows the confirm/dismiss dialog. A `DuplicateEntryException` result offers to open the existing entry.
+- Auth (`data/services/auth_service.dart`, `data/repositories/auth_repository.dart`): Supabase email/password, plus Google.
+  - Google on desktop uses a loopback PKCE flow (`loopback_oauth.dart`, port 3693, redirect `http://127.0.0.1:3693/auth-callback` must be allowed in Supabase Auth URL config).
+  - Google on the web uses the normal redirect.
+  - Mobile Google sign-in isn't wired up yet (needs deep-link setup).
+  - `Profile` is derived from the Supabase user, and `profile.id` is the `ownerId`.
 
 - `lib/domain/models/`: immutable `freezed` models: `Profile` → `LanguagePack` → `Entry`. They're storage-agnostic, with JSON only (snake_case keys via `build.yaml`, matching Postgres columns). Every synced record has a client-generated UUID `id`, UTC `createdAt`/`updatedAt` and a nullable `deletedAt` (soft delete, so deletions sync). Packs and entries carry `ownerId`.
 - `lib/domain/languages/`: language-specific grammar. An `Entry` stores a `term` (headword) plus a free-form `forms` map. A `LanguageSchema` (e.g. `german.dart`) declares, per `WordType`, which form keys exist, whether they're required and their allowed values, and validates entries against that. Adding a language means adding a schema and registering it in `language_registry.dart`, with no model changes. Bump the schema `version` when its fields change; entries record the version they were written against in `schemaVersion`.

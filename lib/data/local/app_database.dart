@@ -25,8 +25,10 @@ class LanguagePacks extends Table {
 /// every write: [searchTerm] and [searchTranslations] (normalized for search)
 /// and [duplicateKey], which a partial unique index uses to forbid two active
 /// entries with the same term and word type in a pack.
+///
+/// `entries_pack_created` serves the timeline and lookups by pack alone.
 @DataClassName('EntryRow')
-@TableIndex(name: 'entries_pack_id', columns: {#packId})
+@TableIndex(name: 'entries_pack_created', columns: {#packId, #createdAt})
 @TableIndex.sql(
   'CREATE UNIQUE INDEX entries_unique_term '
   'ON entries (pack_id, word_type, duplicate_key) '

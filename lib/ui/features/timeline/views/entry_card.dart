@@ -1,0 +1,88 @@
+import 'package:flutter/material.dart';
+
+import '../../../../domain/languages/language_schema.dart';
+import '../../../../domain/models/entry.dart';
+import '../../../core/entry_display.dart';
+import '../../../core/labels.dart';
+
+/// Summary of an entry: headword, word type, forms, translations and tags.
+/// Examples and notes are shown in the detail view.
+class EntryCard extends StatelessWidget {
+  const EntryCard({
+    super.key,
+    required this.entry,
+    required this.schema,
+    required this.onTap,
+  });
+
+  final Entry entry;
+  final LanguageSchema? schema;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final languageCode = schema?.code ?? '';
+    final forms = displayForms(entry, schema);
+
+    return Card(
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            spacing: 4,
+            children: [
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.baseline,
+                textBaseline: TextBaseline.alphabetic,
+                children: [
+                  Expanded(
+                    child: Text(
+                      headword(entry),
+                      style: theme.textTheme.titleMedium,
+                    ),
+                  ),
+                  Text(
+                    wordTypeLabel(entry.wordType),
+                    style: theme.textTheme.labelMedium?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ],
+              ),
+              if (forms.isNotEmpty)
+                Text(
+                  [
+                    for (final (key, value) in forms)
+                      '${fieldLabel(languageCode, key)}: $value',
+                  ].join(' · '),
+                  style: theme.textTheme.bodySmall,
+                ),
+              if (entry.translations.isNotEmpty)
+                Text(
+                  entry.translations.join(', '),
+                  style: theme.textTheme.bodyMedium,
+                ),
+              if (entry.tags.isNotEmpty)
+                Wrap(
+                  spacing: 6,
+                  runSpacing: 4,
+                  children: [
+                    for (final tag in entry.tags)
+                      Chip(
+                        label: Text(tag),
+                        visualDensity: VisualDensity.compact,
+                        materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      ),
+                  ],
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}

@@ -1,8 +1,13 @@
 import 'package:drift_flutter/drift_flutter.dart';
+import 'package:path_provider/path_provider.dart';
 
 import 'app_database.dart';
 
 /// Opens the app's on-device database.
+///
+/// Natively, the file is `langtool.sqlite` in the app's private data
+/// directory (e.g. `~/.local/share/io.github.itslawrey.langtool` on Linux),
+/// not drift's default of the user's Documents folder.
 ///
 /// On the web, SQLite runs from `web/sqlite3.wasm` in `web/drift_worker.js`.
 /// Both come from the drift GitHub release matching the drift version in
@@ -10,6 +15,9 @@ import 'app_database.dart';
 AppDatabase openAppDatabase() => AppDatabase(
   driftDatabase(
     name: 'langtool',
+    native: const DriftNativeOptions(
+      databaseDirectory: getApplicationSupportDirectory,
+    ),
     web: DriftWebOptions(
       sqlite3Wasm: Uri.parse('sqlite3.wasm'),
       driftWorker: Uri.parse('drift_worker.js'),
