@@ -5,7 +5,9 @@
   "targets": {
     "itslawrey-flutter-demos": {
       "hosting": {
-        "langtool": ["itslawrey-langtool"]
+        "langtool": [
+          "itslawrey-langtool"
+        ]
       }
     }
   },
