@@ -58,3 +58,6 @@ app.*.map.json
 
 # Local-only notes (service inventory, setup records)
 *.local.md
+
+# Firebase CLI deploy cache
+.firebase/

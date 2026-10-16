@@ -1,0 +1,15 @@
+{
+  "projects": {
+    "default": "itslawrey-flutter-demos"
+  },
+  "targets": {
+    "itslawrey-flutter-demos": {
+      "hosting": {
+        "langtool": [
+          "itslawrey-langtool"
+        ]
+      }
+    }
+  },
+  "etags": {}
+}
