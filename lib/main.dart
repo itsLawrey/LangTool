@@ -4,7 +4,9 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'app_scope.dart';
 import 'config/app_config.dart';
 import 'data/local/connection.dart';
+import 'data/repositories/settings_repository.dart';
 import 'data/services/auth_service.dart';
+import 'data/services/shared_preferences_settings_store.dart';
 import 'data/services/supabase_sync_api.dart';
 
 Future<void> main() async {
@@ -15,6 +17,9 @@ Future<void> main() async {
     publishableKey: config.supabasePublishableKey,
   );
   final client = Supabase.instance.client;
+  final settingsStore = await SharedPreferencesSettingsStore.create(
+    allowList: SettingsRepository.keys,
+  );
 
   runApp(
     AppScope(
@@ -22,6 +27,7 @@ Future<void> main() async {
         database: openAppDatabase(),
         authService: AuthService(client.auth),
         syncApi: SupabaseSyncApi(client),
+        settingsStore: settingsStore,
       ),
     ),
   );

@@ -10,27 +10,34 @@ import 'data/repositories/entry_repository.dart';
 import 'data/repositories/language_pack_repository.dart';
 import 'data/repositories/pack_merge_repository.dart';
 import 'data/repositories/pack_transfer_repository.dart';
+import 'data/repositories/settings_repository.dart';
 import 'data/repositories/sync_engine.dart';
 import 'data/repositories/sync_repository.dart';
 import 'data/services/auth_service.dart';
 import 'data/services/file_picker_file_service.dart';
 import 'data/services/file_service.dart';
+import 'data/services/in_memory_settings_store.dart';
 import 'data/services/remote_sync_api.dart';
+import 'data/services/settings_store.dart';
 
 /// The app's external dependencies. `main.dart` passes the real ones;
 /// integration tests pass in-memory and fake ones.
 final class AppDependencies {
-  const AppDependencies({
+  AppDependencies({
     required this.database,
     required this.authService,
     required this.syncApi,
     this.fileService = const FilePickerFileService(),
-  });
+    SettingsStore? settingsStore,
+  }) : settingsStore = settingsStore ?? InMemorySettingsStore();
 
   final AppDatabase database;
   final AuthService authService;
   final RemoteSyncApi syncApi;
   final FileService fileService;
+
+  /// Where this device's options are stored.
+  final SettingsStore settingsStore;
 }
 
 /// The app with its repositories provided to the widget tree.
@@ -62,6 +69,9 @@ class AppScope extends StatelessWidget {
           create: (_) => LocalPackTransferRepository(database),
         ),
         Provider<FileService>.value(value: dependencies.fileService),
+        ChangeNotifierProvider(
+          create: (_) => SettingsRepository(dependencies.settingsStore),
+        ),
         ChangeNotifierProvider(
           lazy: false,
           create: (context) {

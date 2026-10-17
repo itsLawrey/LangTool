@@ -1,5 +1,6 @@
 import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:langtool/app_scope.dart';
@@ -497,6 +498,59 @@ void main() {
     expect(find.text('Zuhause'), findsWidgets);
     expect(find.text('das Haus'), findsOneWidget);
     expect(find.text('das Auto'), findsNothing);
+
+    await tester.pumpWidget(const SizedBox());
+    await database.close();
+  });
+
+  testWidgets('quick add mode adds two nouns in a row with Ctrl+Enter', (
+    tester,
+  ) async {
+    auth.emitSignedIn();
+    await tester.pumpWidget(
+      AppScope(
+        dependencies: AppDependencies(
+          database: database,
+          authService: auth,
+          syncApi: server,
+        ),
+      ),
+    );
+    await wait(tester);
+
+    // Turn on quick add mode in the options.
+    await tester.tap(find.byIcon(Icons.menu));
+    await wait(tester, 5);
+    await tapText(tester, 'Options');
+    await tapText(tester, 'Quick add mode');
+    await tester.pageBack();
+    await wait(tester);
+
+    await tapText(tester, 'New pack');
+    await tester.enterText(find.byType(TextField), 'Alltag');
+    await tapText(tester, 'Create');
+    await tapText(tester, 'Alltag');
+
+    // Each Ctrl+Enter saves the noun and starts the next one.
+    await tapText(tester, 'New entry');
+    for (final (term, translation) in [('Haus', 'house'), ('Auto', 'car')]) {
+      await enter(tester, 'Term', term);
+      await tapText(tester, 'Article');
+      await tapText(tester, 'das');
+      await enter(tester, 'Translation', translation);
+      await tester.sendKeyDownEvent(LogicalKeyboardKey.controlLeft);
+      await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+      await tester.sendKeyUpEvent(LogicalKeyboardKey.controlLeft);
+      await wait(tester);
+      expect(find.text('New entry'), findsOneWidget);
+      expect(find.widgetWithText(TextField, term), findsNothing);
+      expect(find.textContaining('saved.'), findsOneWidget);
+    }
+
+    await tester.pageBack();
+    await wait(tester);
+    expect(find.text('das Haus'), findsOneWidget);
+    expect(find.text('das Auto'), findsOneWidget);
 
     await tester.pumpWidget(const SizedBox());
     await database.close();

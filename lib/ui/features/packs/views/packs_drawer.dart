@@ -7,7 +7,7 @@ import '../../../../data/services/file_service.dart';
 import '../../../../routing/routes.dart';
 import '../../../core/error_message.dart';
 
-/// The signed-in account, import, export and sign out.
+/// The signed-in account, import, export, merge, options and sign out.
 class PacksDrawer extends StatelessWidget {
   const PacksDrawer({super.key});
 
@@ -38,6 +38,11 @@ class PacksDrawer extends StatelessWidget {
               leading: const Icon(Icons.merge),
               title: const Text('Merge packs'),
               onTap: () => _open(context, Routes.mergePacks),
+            ),
+            ListTile(
+              leading: const Icon(Icons.tune),
+              title: const Text('Options'),
+              onTap: () => _open(context, Routes.options),
             ),
             const Divider(),
             ListTile(

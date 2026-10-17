@@ -4,8 +4,7 @@ import '../../../../domain/languages/language_schema.dart';
 import '../../../core/labels.dart';
 
 /// The type-specific form fields of the selected word type, as defined by the
-/// language schema. Fields with allowed values become dropdowns, the rest
-/// free text.
+/// language schema, one below the other.
 class SchemaFormFields extends StatelessWidget {
   const SchemaFormFields({
     super.key,
@@ -25,25 +24,48 @@ class SchemaFormFields extends StatelessWidget {
     spacing: 12,
     children: [
       for (final field in fields)
-        if (field.allowedValues case final allowed?)
-          _ChoiceField(
-            field: field,
-            label: fieldLabel(languageCode, field.key),
-            options: allowed.toList(),
-            controller: controllerFor(field.key),
-          )
-        else
-          TextFormField(
-            controller: controllerFor(field.key),
-            decoration: InputDecoration(
-              labelText: fieldLabel(languageCode, field.key),
-            ),
-            validator: (value) => field.required && (value ?? '').trim().isEmpty
-                ? 'Required.'
-                : null,
-          ),
+        SchemaField(
+          languageCode: languageCode,
+          field: field,
+          controller: controllerFor(field.key),
+        ),
     ],
   );
+}
+
+/// One type-specific form field. A field with allowed values becomes a
+/// dropdown, the rest free text.
+class SchemaField extends StatelessWidget {
+  const SchemaField({
+    super.key,
+    required this.languageCode,
+    required this.field,
+    required this.controller,
+  });
+
+  final String languageCode;
+  final FieldDefinition field;
+  final TextEditingController controller;
+
+  @override
+  Widget build(BuildContext context) {
+    final label = fieldLabel(languageCode, field.key);
+    if (field.allowedValues case final allowed?) {
+      return _ChoiceField(
+        field: field,
+        label: label,
+        options: allowed.toList(),
+        controller: controller,
+      );
+    }
+    return TextFormField(
+      controller: controller,
+      decoration: InputDecoration(labelText: label),
+      textInputAction: TextInputAction.next,
+      validator: (value) =>
+          field.required && (value ?? '').trim().isEmpty ? 'Required.' : null,
+    );
+  }
 }
 
 class _ChoiceField extends StatelessWidget {
@@ -64,6 +86,7 @@ class _ChoiceField extends StatelessWidget {
     final current = controller.text;
     return DropdownButtonFormField<String>(
       initialValue: options.contains(current) ? current : null,
+      isExpanded: true,
       decoration: InputDecoration(labelText: label),
       items: [
         if (!field.required)

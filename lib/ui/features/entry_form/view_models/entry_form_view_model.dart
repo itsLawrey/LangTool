@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 
 import '../../../../data/repositories/entry_repository.dart';
 import '../../../../data/repositories/language_pack_repository.dart';
+import '../../../../data/repositories/settings_repository.dart';
 import '../../../../domain/languages/language_registry.dart';
 import '../../../../domain/languages/language_schema.dart';
 import '../../../../domain/models/entry.dart';
@@ -15,15 +16,18 @@ class EntryFormViewModel extends ChangeNotifier {
   EntryFormViewModel({
     required EntryRepository entryRepository,
     required LanguagePackRepository packRepository,
+    required SettingsRepository settingsRepository,
     required this.packId,
     this.entryId,
   }) : _entries = entryRepository,
-       _packs = packRepository {
+       _packs = packRepository,
+       _settings = settingsRepository {
     _load();
   }
 
   final EntryRepository _entries;
   final LanguagePackRepository _packs;
+  final SettingsRepository _settings;
   final String packId;
   final String? entryId;
 
@@ -38,6 +42,12 @@ class EntryFormViewModel extends ChangeNotifier {
   bool get loading => _loading;
   bool get saving => _saving;
   LanguageSchema? get schema => _schema;
+
+  /// Whether translations are typed in one comma-separated field.
+  bool get commaTranslations => _settings.commaTranslations;
+
+  /// Whether Ctrl+Enter saves (and, for a new entry, starts the next one).
+  bool get quickAddMode => _settings.quickAddMode;
 
   /// How many times "save and new" started a blank form. The view builds a
   /// fresh form for each round.

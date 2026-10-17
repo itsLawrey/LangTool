@@ -53,6 +53,10 @@ void main() {
               path: 'merge',
               builder: (_, _) => const Scaffold(body: Text('merge')),
             ),
+            GoRoute(
+              path: 'options',
+              builder: (_, _) => const Scaffold(body: Text('options')),
+            ),
           ],
         ),
       ],
@@ -61,7 +65,9 @@ void main() {
     await settle(tester);
   }
 
-  testWidgets('shows the account, Import, Export and Sign out', (tester) async {
+  testWidgets('shows the account, Import, Export, Options and Sign out', (
+    tester,
+  ) async {
     await openDrawer(tester);
 
     expect(find.byType(Drawer), findsOneWidget);
@@ -69,7 +75,15 @@ void main() {
     expect(find.text('Import'), findsOneWidget);
     expect(find.text('Export'), findsOneWidget);
     expect(find.text('Merge packs'), findsOneWidget);
+    expect(find.text('Options'), findsOneWidget);
     expect(find.text('Sign out'), findsOneWidget);
+    expect(
+      tester.getTopLeft(find.text('Options')).dy,
+      allOf(
+        greaterThan(tester.getTopLeft(find.text('Merge packs')).dy),
+        lessThan(tester.getTopLeft(find.text('Sign out')).dy),
+      ),
+    );
     await disposeAndClose(tester, repos.db);
   });
 
@@ -138,6 +152,17 @@ void main() {
     await settle(tester);
 
     expect(find.text('merge'), findsOneWidget);
+    await disposeAndClose(tester, repos.db);
+  });
+
+  testWidgets('Options opens the options screen', (tester) async {
+    await openDrawer(tester);
+
+    await tester.tap(find.text('Options'));
+    await settle(tester);
+
+    expect(find.text('options'), findsOneWidget);
+    expect(find.byType(Drawer), findsNothing);
     await disposeAndClose(tester, repos.db);
   });
 
