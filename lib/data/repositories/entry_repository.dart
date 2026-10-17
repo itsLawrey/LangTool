@@ -2,6 +2,7 @@ import 'package:drift/drift.dart';
 
 import '../../domain/exceptions.dart';
 import '../../domain/languages/language_registry.dart';
+import '../../domain/models/clean_entry.dart';
 import '../../domain/models/entry.dart';
 import '../../domain/models/entry_draft.dart';
 import '../../domain/models/language_pack.dart';
@@ -114,7 +115,7 @@ class LocalEntryRepository implements EntryRepository {
     if (pack == null) return Result.error(NotFoundException(draft.packId));
 
     final now = _clock();
-    final entry = _clean(
+    final entry = cleanEntry(
       Entry(
         id: _newId(),
         ownerId: pack.ownerId,
@@ -141,7 +142,7 @@ class LocalEntryRepository implements EntryRepository {
     final pack = await _activePack(stored.packId);
     if (pack == null) return Result.error(NotFoundException(stored.packId));
 
-    final updated = _clean(
+    final updated = cleanEntry(
       entry.copyWith(
         ownerId: stored.ownerId,
         packId: stored.packId,
@@ -321,37 +322,6 @@ class LocalEntryRepository implements EntryRepository {
     )..where((p) => p.id.equals(id) & p.deletedAt.isNull())).getSingleOrNull();
     return row?.toDomain();
   }
-}
-
-/// Trims text fields and drops blank list items and forms.
-Entry _clean(Entry entry) {
-  List<String> cleanList(List<String> items) => [
-    for (final item in items)
-      if (item.trim().isNotEmpty) item.trim(),
-  ];
-  final notes = entry.notes?.trim();
-
-  return entry.copyWith(
-    term: entry.term.trim(),
-    forms: {
-      for (final MapEntry(:key, :value) in entry.forms.entries)
-        if (value.trim().isNotEmpty) key: value.trim(),
-    },
-    translations: cleanList(entry.translations),
-    examples: [
-      for (final example in entry.examples)
-        if (example.text.trim().isNotEmpty)
-          Example(
-            text: example.text.trim(),
-            translation: switch (example.translation?.trim()) {
-              final t? when t.isNotEmpty => t,
-              _ => null,
-            },
-          ),
-    ],
-    tags: cleanList(entry.tags),
-    notes: notes == null || notes.isEmpty ? null : notes,
-  );
 }
 
 List<String> _splitTranslations(String joined) =>

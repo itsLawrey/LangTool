@@ -5,6 +5,11 @@ abstract final class Routes {
   static const login = '/login';
   static const packs = '/';
 
+  /// The preview of a pack file to import. Its bytes are passed as the
+  /// route's `extra`.
+  static const importPacks = '/import';
+  static const exportPacks = '/export';
+
   /// The pack's Note tab (entry timeline).
   static String pack(String packId) => '/packs/$packId';
   static String newEntry(String packId) => '/packs/$packId/entries/new';

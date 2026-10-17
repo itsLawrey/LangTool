@@ -94,6 +94,34 @@ void main() {
       );
     });
 
+    test('describes each pack file problem', () {
+      String message(PackFileProblem reason, {String? term}) =>
+          errorMessage(PackFileException(reason, term: term));
+
+      expect(
+        message(PackFileProblem.notLangTool),
+        'This is not a LangTool file.',
+      );
+      expect(
+        message(PackFileProblem.newerVersion),
+        'This file was made by a newer version of LangTool. '
+        'Update the app to import it.',
+      );
+      expect(
+        message(PackFileProblem.unsupportedLanguage),
+        'This file contains a language this app does not support.',
+      );
+      expect(
+        message(PackFileProblem.invalidEntry, term: 'Haus'),
+        'The entry "Haus" in this file is invalid.',
+      );
+      expect(
+        message(PackFileProblem.duplicateEntry, term: 'Haus'),
+        'The entry "Haus" appears twice in one pack.',
+      );
+      expect(message(PackFileProblem.tooLarge), 'This file is too large.');
+    });
+
     test('passes auth messages through and wraps anything else', () {
       expect(
         errorMessage(const AuthException('Invalid login credentials')),

@@ -40,6 +40,10 @@ Layered per Flutter's official architecture guide (MVVM with `provider` and `go_
   - The session screen and summary save nothing.
   - **Deck editor:** each filter is a `FilterEditor` (`deck_editor/view_models/filters/`) plus a section widget (`deck_editor/views/filters/`). Add a filter by writing both and registering them in `DeckEditorViewModel` and `DeckEditorForm`. Filters the editor can't edit (`unknown`, filters that match nothing) are kept unchanged.
   - Labels and summaries are in `ui/core/recap_labels.dart`.
+- **Packs screen drawer** (`packs/views/packs_drawer.dart`): the account, Import, Export and Sign out.
+  - Import calls `FileService.pickFile()` directly in the tap handler, since browsers only open a file dialog from a user gesture. It then pushes `/import` with the bytes as `extra`; without them (e.g. after a web reload) the route redirects to `/`.
+  - The import screen previews the packs in the file with checkboxes. The export screen selects packs and saves one file through `FileService.saveFile`.
+  - Both live in `ui/features/transfer/`.
 - `lib/ui/features/<feature>/{view_models,views}/`: auth, packs, timeline, entry_detail and entry_form.
   - `ui/core/` holds shared labels, display helpers, dialogs and the theme.
   - Keep files small and split widgets into their own files.
@@ -53,7 +57,7 @@ Layered per Flutter's official architecture guide (MVVM with `provider` and `go_
   - `Profile` is derived from the Supabase user, and `profile.id` is the `ownerId`.
 
 - `lib/domain/models/`: immutable `freezed` models: `Profile` → `LanguagePack` → `Entry`, plus `Deck` (per pack). They're storage-agnostic, with JSON only (snake_case keys via `build.yaml`, matching Postgres columns). Every synced record has a client-generated UUID `id`, UTC `createdAt`/`updatedAt` and a nullable `deletedAt` (soft delete, so deletions sync). Packs, entries and decks carry `ownerId`.
-- `lib/domain/languages/`: language-specific grammar. An `Entry` stores a `term` (headword) plus a free-form `forms` map. A `LanguageSchema` (e.g. `german.dart`) declares, per `WordType`, which form keys exist, whether they're required and their allowed values, and validates entries against that. Adding a language means adding a schema and registering it in `language_registry.dart`, with no model changes. Bump the schema `version` when its fields change; entries record the version they were written against in `schemaVersion`.
+- `lib/domain/languages/`: language-specific grammar. An `Entry` stores a `term` (headword) plus a free-form `forms` map. A `LanguageSchema` (e.g. `german.dart`) declares, per `WordType`, which form keys exist, whether they're required and their allowed values, and validates entries against that. Adding a language means adding a schema and registering it in `language_registry.dart`, with no model changes. Bump the schema `version` when its fields change; entries record the version they were written against in `schemaVersion`. A bump also needs the matching step in the schema's `migrateForms` override, so that pack files from older versions still import.
 - `lib/domain/search/`: pure Dart search logic with no DB.
   - `text_normalizer.dart` defines two keys:
     - `duplicateKey`: case and whitespace folded, umlauts kept, so "schon" ≠ "schön";
@@ -66,6 +70,21 @@ Layered per Flutter's official architecture guide (MVVM with `provider` and `go_
   - `deck_filter.dart`: sealed `DeckFilter` (`addedBetween`, `addedInLastDays`, `wordTypes`), combined with AND, stored as JSON with a `type` discriminator. A type this version doesn't know becomes `unknown`: it's kept verbatim (so it survives sync) and matches nothing. Adding a filter type means a new union case plus its SQL condition in `data/local/deck_filter_query.dart`.
   - Date filters use the device's local calendar days, converted to UTC bounds.
   - `recap_session.dart`: pure session logic (shuffle, direction, reveal/answer, counts). Nothing is persisted.
+- `lib/domain/transfer/`: the `.langtool` pack file used for import and export.
+  - The format is gzip-compressed UTF-8 JSON, documented at `packFileToJson` (`pack_file_json.dart`). The gzip step (`package:archive`, which also works on web) lives in `data/transfer/pack_file_codec.dart`.
+  - A file holds any number of packs with their active entries and decks. It leaves out ids, owners, `updated_at`, `deleted_at`, and empty or `null` fields.
+  - **Two versions guard compatibility:**
+    - The file `version` (`packFileVersion` in `pack_file_format.dart`). When the layout changes, bump it and add the step `vN → vN+1` to `packFileMigrations`. Never change an old step.
+    - Each entry's `schema_version`, which older entries reach the current version through via `LanguageSchema.migrateForms`.
+
+    Anything newer than the app (a file or schema version, or an unknown word type) is rejected as `PackFileProblem.newerVersion`. Unknown deck filter types are kept as `unknown`.
+  - Decoding validates everything before anything is written:
+    - the format;
+    - the language;
+    - each entry against its schema (after `cleanEntry`);
+    - duplicates within a pack;
+    - a 20 MB decompressed cap.
+  - `PackTransferRepository.import` writes all the selected packs in one transaction, as new packs with fresh ids owned by the importing user. It keeps `created_at` and sets `needs_push`, so the packs sync.
 - No UI strings (e.g. field labels) belong in the domain layer.
 - `lib/data/local/`: Drift (SQLite) database.
   - `entries` rows carry derived columns written by `mappers.dart`: `search_term`, `search_translations` (newline-joined) and `duplicate_key`.

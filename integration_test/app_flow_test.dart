@@ -4,8 +4,10 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:langtool/app_scope.dart';
 import 'package:langtool/data/local/app_database.dart';
+import 'package:langtool/data/services/file_service.dart';
 
 import '../test/helpers/fake_auth_service.dart';
+import '../test/helpers/fake_file_service.dart';
 import '../test/helpers/fake_remote_sync_api.dart';
 
 /// End-to-end flows through the real app on a device (run with
@@ -246,6 +248,85 @@ void main() {
     expect(find.text("Didn't know 1"), findsOneWidget);
     await tapText(tester, 'Done');
     expect(find.text('Start'), findsOneWidget);
+
+    await tester.pumpWidget(const SizedBox());
+    await database.close();
+  });
+
+  testWidgets('export a pack with its deck and import it as a copy', (
+    tester,
+  ) async {
+    auth.emitSignedIn();
+    final files = FakeFileService();
+    await tester.pumpWidget(
+      AppScope(
+        dependencies: AppDependencies(
+          database: database,
+          authService: auth,
+          syncApi: server,
+          fileService: files,
+        ),
+      ),
+    );
+    await wait(tester);
+
+    // A pack with an entry and a deck.
+    await tapText(tester, 'New pack');
+    await tester.enterText(find.byType(TextField), 'Alltag');
+    await tapText(tester, 'Create');
+    await tapText(tester, 'Alltag');
+    await addNoun(tester, 'Haus', 'house');
+    await tapText(tester, 'Recap');
+    await tapText(tester, 'New deck');
+    await tester.enterText(find.widgetWithText(TextField, 'Name'), 'Alle');
+    await tester.tap(find.widgetWithText(FilledButton, 'Save'));
+    await wait(tester);
+    await tester.pageBack();
+    await wait(tester);
+    await tester.pageBack();
+    await wait(tester);
+    expect(find.text('Language packs'), findsOneWidget);
+
+    // Export it from the drawer.
+    await tester.tap(find.byIcon(Icons.menu));
+    await wait(tester, 5);
+    await tapText(tester, 'Export');
+    await tapText(tester, 'Alltag');
+    await tester.tap(find.widgetWithText(FilledButton, 'Export'));
+    await wait(tester);
+    expect(find.text('Exported 1 pack.'), findsOneWidget);
+    final file = files.saved.single;
+    expect(file.name, 'Alltag.langtool');
+    // Let the message time out, so the next one is shown right away.
+    for (
+      var i = 0;
+      i < 100 && find.byType(SnackBar).evaluate().isNotEmpty;
+      i++
+    ) {
+      await wait(tester, 1);
+    }
+
+    // Import the file: the preview lists the pack, importing adds a copy.
+    files.nextPick = PickedFile(name: file.name, bytes: file.bytes);
+    await tester.tap(find.byIcon(Icons.menu));
+    await wait(tester, 5);
+    await tapText(tester, 'Import');
+    expect(find.text('German · 1 entry · 1 deck'), findsOneWidget);
+    await tester.tap(find.widgetWithText(FilledButton, 'Import'));
+    await wait(tester);
+    expect(find.text('Imported 1 pack with 1 entry.'), findsOneWidget);
+    expect(find.text('Alltag'), findsNWidgets(2));
+
+    // Both packs, the original and the copy, hold the entry and the deck.
+    for (final index in [0, 1]) {
+      await tester.tap(find.text('Alltag').at(index));
+      await wait(tester);
+      expect(find.text('das Haus'), findsOneWidget);
+      await tapText(tester, 'Recap');
+      expect(find.text('Alle'), findsOneWidget);
+      await tester.pageBack();
+      await wait(tester);
+    }
 
     await tester.pumpWidget(const SizedBox());
     await database.close();

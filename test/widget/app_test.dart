@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:drift/drift.dart' show driftRuntimeOptions;
 import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
@@ -75,7 +77,7 @@ void main() {
     expect(find.text('Language packs'), findsOneWidget);
     expect(find.text('No language packs yet.'), findsOneWidget);
 
-    await tester.tap(find.byTooltip('Account'));
+    await tester.tap(find.byIcon(Icons.menu));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Sign out'));
     await tester.pumpAndSettle();
@@ -196,6 +198,28 @@ void main() {
     await settle(tester);
     expect(router.state.uri.queryParameters['direction'], 'mixed');
     expect(find.byType(NavigationBar), findsNothing);
+    await disposeAndClose(tester, database);
+  });
+
+  testWidgets('routes to export, and to import only with a file', (
+    tester,
+  ) async {
+    auth.emitSignedIn();
+    await pumpApp(tester);
+    final router = GoRouter.of(tester.element(find.byType(Scaffold).first));
+
+    router.go(Routes.exportPacks);
+    await settle(tester);
+    expect(find.widgetWithText(AppBar, 'Export'), findsOneWidget);
+
+    router.go(Routes.importPacks);
+    await settle(tester);
+    expect(find.text('Language packs'), findsOneWidget);
+
+    router.push(Routes.importPacks, extra: Uint8List.fromList([1, 2, 3]));
+    await settle(tester);
+    expect(find.widgetWithText(AppBar, 'Import'), findsOneWidget);
+    expect(find.text('This is not a LangTool file.'), findsOneWidget);
     await disposeAndClose(tester, database);
   });
 

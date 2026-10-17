@@ -31,11 +31,28 @@ class EntryFormViewModel extends ChangeNotifier {
   bool _saving = false;
   LanguageSchema? _schema;
   Entry? _initial;
+  int _round = 0;
+  WordType? _nextWordType;
 
   bool get isEditing => entryId != null;
   bool get loading => _loading;
   bool get saving => _saving;
   LanguageSchema? get schema => _schema;
+
+  /// How many times "save and new" started a blank form. The view builds a
+  /// fresh form for each round.
+  int get round => _round;
+
+  /// The word type a blank form starts with: the one last saved with
+  /// "save and new".
+  WordType? get nextWordType => _nextWordType;
+
+  /// Starts a blank form for the next entry, keeping [wordType].
+  void startNext(WordType wordType) {
+    _round++;
+    _nextWordType = wordType;
+    notifyListeners();
+  }
 
   /// The entry being edited, or `null` when adding.
   Entry? get initial => _initial;

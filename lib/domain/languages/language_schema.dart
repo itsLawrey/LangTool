@@ -21,6 +21,18 @@ class LanguageSchema {
   final int version;
   final Map<WordType, WordTypeSchema> wordTypes;
 
+  /// Upgrades the [forms] of a [wordType] entry written against schema
+  /// version [fromVersion] (older than [version]) to the current fields.
+  ///
+  /// Used when importing entries saved by an older app version. A schema
+  /// whose [version] is bumped because its fields changed must override this
+  /// with the matching step. The base implementation keeps [forms] unchanged.
+  Map<String, String> migrateForms(
+    Map<String, String> forms,
+    WordType wordType,
+    int fromVersion,
+  ) => forms;
+
   /// Returns every issue with [entry]'s term, word type and forms. An empty
   /// list means the entry is valid.
   List<ValidationIssue> validate(Entry entry) {

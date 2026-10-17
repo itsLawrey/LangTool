@@ -197,6 +197,35 @@ void main() {
     await disposeAndClose(tester, repos.db);
   });
 
+  testWidgets('save and new saves, then starts a blank form', (tester) async {
+    await openForm(tester);
+
+    await choose(tester, 'Noun', 'Verb');
+    await enter(tester, 'Term', 'gehen');
+    await enter(tester, 'Translation', 'to go');
+    await tester.tap(find.text('Save and new'));
+    await settle(tester);
+
+    expect(find.text('gehen saved.'), findsOneWidget);
+    expect(find.text('New entry'), findsOneWidget);
+    expect(find.widgetWithText(TextField, 'gehen'), findsNothing);
+    expect(find.widgetWithText(TextField, 'to go'), findsNothing);
+    expect(find.text('Verb'), findsOneWidget);
+
+    await enter(tester, 'Term', 'laufen');
+    await tester.tap(find.text('Save and new'));
+    await settle(tester);
+
+    final entries = await tester.runAsync(saved) ?? [];
+    expect(entries.map((e) => (e.term, e.wordType)), [
+      ('gehen', WordType.verb),
+      ('laufen', WordType.verb),
+    ]);
+    expect(entries.first.translations, ['to go']);
+    expect(find.text('New entry'), findsOneWidget);
+    await disposeAndClose(tester, repos.db);
+  });
+
   testWidgets('editing pre-fills the form and saves changes', (tester) async {
     final haus = (await tester.runAsync(
       () => repos.addNoun(pack, 'Haus', translations: ['house']),
@@ -204,6 +233,7 @@ void main() {
     await openForm(tester, entryId: haus.id);
 
     expect(find.text('Edit entry'), findsOneWidget);
+    expect(find.text('Save and new'), findsNothing);
     expect(find.widgetWithText(TextField, 'Haus'), findsOneWidget);
     expect(find.widgetWithText(TextField, 'house'), findsOneWidget);
     await enter(tester, 'Notes', 'edited');
