@@ -73,6 +73,17 @@ void main() {
     await settle(() => server.entries.length == 1);
   });
 
+  test('uploads deck edits shortly after they are made', () async {
+    final pack = await repos.createPack();
+    authService.emitSignedIn();
+    await settle(() => sync.lastSyncedAt != null && server.packs.length == 1);
+    await settle(() => sync.phase == SyncPhase.idle);
+
+    await repos.createDeck(pack, 'Nouns');
+
+    await settle(() => server.decks.length == 1);
+  });
+
   test('reports offline on network errors and recovers', () async {
     server.failure = http.ClientException('Connection refused');
     authService.emitSignedIn();

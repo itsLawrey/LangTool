@@ -5,14 +5,16 @@ import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:langtool/data/services/remote_sync_api.dart';
 import 'package:langtool/data/services/supabase_sync_api.dart';
+import 'package:langtool/domain/models/deck.dart';
 import 'package:langtool/domain/models/entry.dart';
 import 'package:langtool/domain/models/language_pack.dart';
 import 'package:langtool/domain/models/word_type.dart';
+import 'package:langtool/domain/recap/deck_filter.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 /// Contract tests: the exact PostgREST requests the adapter sends, and how
-/// it parses responses shaped like the real `language_packs` / `entries`
-/// tables (see supabase/migrations/).
+/// it parses responses shaped like the real `language_packs` / `entries` /
+/// `decks` tables (see supabase/migrations/).
 void main() {
   late List<http.Request> requests;
   late http.Response Function(http.Request) respond;
@@ -61,6 +63,40 @@ void main() {
     createdAt: created,
     updatedAt: updated,
   );
+
+  final deck = Deck(
+    id: '0199f0e2-0000-7000-8000-0000000000dd',
+    ownerId: 'user-1',
+    packId: '0199f0e2-0000-7000-8000-0000000000aa',
+    name: 'Recent nouns',
+    filters: [
+      DeckFilter.addedBetween(from: DateTime(2026, 10, 1)),
+      const DeckFilter.addedInLastDays(7),
+      const DeckFilter.wordTypes({WordType.noun, WordType.verb}),
+      const DeckFilter.unknown({'type': 'tagged', 'tag': 'A1'}),
+    ],
+    createdAt: created,
+    updatedAt: updated,
+  );
+
+  final deckJson = {
+    'id': '0199f0e2-0000-7000-8000-0000000000dd',
+    'owner_id': 'user-1',
+    'pack_id': '0199f0e2-0000-7000-8000-0000000000aa',
+    'name': 'Recent nouns',
+    'filters': [
+      {'type': 'added_between', 'from': '2026-10-01', 'to': null},
+      {'type': 'added_in_last_days', 'days': 7},
+      {
+        'type': 'word_types',
+        'values': ['noun', 'verb'],
+      },
+      {'type': 'tagged', 'tag': 'A1'},
+    ],
+    'created_at': '2026-10-15T12:00:00.000Z',
+    'updated_at': '2026-10-15T13:00:00.123456Z',
+    'deleted_at': null,
+  };
 
   group('upsert', () {
     test('posts entries as snake_case rows, merging on id', () async {
@@ -123,9 +159,24 @@ void main() {
       });
     });
 
+    test('posts decks with their filters as a JSON array', () async {
+      await api.upsertDecks([deck]);
+
+      final [request] = requests;
+      expect(request.method, 'POST');
+      expect(request.url.path, '/rest/v1/decks');
+      expect(request.url.queryParameters['on_conflict'], 'id');
+      expect(
+        request.headers['Prefer'],
+        contains('resolution=merge-duplicates'),
+      );
+      expect(jsonDecode(request.body), [deckJson]);
+    });
+
     test('sends nothing for an empty batch', () async {
       await api.upsertEntries(const []);
       await api.upsertPacks(const []);
+      await api.upsertDecks(const []);
 
       expect(requests, isEmpty);
     });
@@ -215,6 +266,55 @@ void main() {
       );
 
       expect(record.value, entry);
+      expect(record.value.updatedAt.isUtc, isTrue);
+      expect(
+        record.serverUpdatedAt,
+        DateTime.utc(2026, 10, 15, 15, 48, 44, 810, 123),
+      );
+    });
+
+    test('requests decks like the other tables', () async {
+      await api.fetchDecks(
+        ownerId: 'user-1',
+        from: ChangeCursor(updated, 'abc'),
+        limit: 10,
+      );
+
+      final [request] = requests;
+      expect(request.method, 'GET');
+      expect(request.url.path, '/rest/v1/decks');
+      expect(paramsOf(request), {
+        'select': '*',
+        'owner_id': 'eq.user-1',
+        'or':
+            '(server_updated_at.gt."2026-10-15T13:00:00.123456Z",'
+            'and(server_updated_at.eq."2026-10-15T13:00:00.123456Z",id.gt.abc))',
+        'order': 'server_updated_at.asc.nullslast,id.asc.nullslast',
+        'limit': '10',
+      });
+    });
+
+    test('parses deck rows as Postgres returns them', () async {
+      respond = (_) => http.Response(
+        jsonEncode([
+          {
+            ...deckJson,
+            'created_at': '2026-10-15T12:00:00+00:00',
+            'updated_at': '2026-10-15T13:00:00.123456+00:00',
+            'server_updated_at': '2026-10-15T15:48:44.810123+00:00',
+          },
+        ]),
+        200,
+        headers: {'content-type': 'application/json; charset=utf-8'},
+      );
+
+      final [record] = await api.fetchDecks(
+        ownerId: 'user-1',
+        from: null,
+        limit: 500,
+      );
+
+      expect(record.value, deck);
       expect(record.value.updatedAt.isUtc, isTrue);
       expect(
         record.serverUpdatedAt,
