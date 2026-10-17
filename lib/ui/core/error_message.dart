@@ -18,7 +18,23 @@ String errorMessage(Exception error, {String languageCode = 'de'}) =>
       InvalidDeckNameException() => 'The deck name is required.',
       InvalidPackNameException() => 'The pack name is required.',
       NotFoundException() => 'It no longer exists.',
+      final PackFileException error => _packFileMessage(error),
       UnsupportedLanguageException(:final languageCode) =>
         '${languageName(languageCode)} is not supported.',
       _ => 'Something went wrong: $error',
     };
+
+/// Why the pack file cannot be imported.
+String _packFileMessage(PackFileException error) => switch (error.reason) {
+  PackFileProblem.notLangTool => 'This is not a LangTool file.',
+  PackFileProblem.newerVersion =>
+    'This file was made by a newer version of LangTool. '
+        'Update the app to import it.',
+  PackFileProblem.unsupportedLanguage =>
+    'This file contains a language this app does not support.',
+  PackFileProblem.invalidEntry =>
+    'The entry "${error.term}" in this file is invalid.',
+  PackFileProblem.duplicateEntry =>
+    'The entry "${error.term}" appears twice in one pack.',
+  PackFileProblem.tooLarge => 'This file is too large.',
+};

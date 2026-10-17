@@ -10,8 +10,8 @@ import '../../../core/widgets/confirm_dialog.dart';
 import '../../../core/widgets/sync_button.dart';
 import '../../../core/widgets/text_input_dialog.dart';
 import '../view_models/packs_view_model.dart';
-import 'account_menu.dart';
 import 'pack_tile.dart';
+import 'packs_drawer.dart';
 
 class PacksScreen extends StatelessWidget {
   const PacksScreen({super.key});
@@ -23,8 +23,9 @@ class PacksScreen extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Language packs'),
-        actions: const [SyncButton(), AccountMenu()],
+        actions: const [SyncButton()],
       ),
+      drawer: const PacksDrawer(),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => _create(context, viewModel),
         icon: const Icon(Icons.add),

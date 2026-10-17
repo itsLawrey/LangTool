@@ -8,8 +8,14 @@ class FakeFileService implements FileService {
   /// Returned by the next [pickFile]; `null` acts as a cancelled dialog.
   PickedFile? nextPick;
 
+  /// Thrown by [pickFile] when set.
+  Exception? pickFailure;
+
   /// Makes [saveFile] act as a cancelled dialog.
   bool cancelSave = false;
+
+  /// Thrown by [saveFile] when set.
+  Exception? saveFailure;
 
   /// Files saved so far, in order.
   final saved = <({String name, Uint8List bytes})>[];
@@ -19,6 +25,7 @@ class FakeFileService implements FileService {
   @override
   Future<PickedFile?> pickFile() async {
     pickCount++;
+    if (pickFailure case final error?) throw error;
     return nextPick;
   }
 
@@ -27,6 +34,7 @@ class FakeFileService implements FileService {
     required String suggestedName,
     required Uint8List bytes,
   }) async {
+    if (saveFailure case final error?) throw error;
     if (cancelSave) return false;
     saved.add((name: suggestedName, bytes: bytes));
     return true;
