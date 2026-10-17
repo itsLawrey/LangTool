@@ -64,7 +64,7 @@ Layered per Flutter's official architecture guide (MVVM with `provider` and `go_
   - Enter moves to the next field; in the last translation or example translation it adds another (an empty last translation moves on instead).
   - Nouns put Article | Term | Plural on one row (`ArticleTermFields`, from 340 px wide).
 - `EntryCard` shows `cardHeadword` (headword plus `, plural`) and `compactForms` (the other form values joined by ` | `). The entry screen keeps labelled forms.
-- `MaxWidthFrame` (`MaterialApp.builder` in `app.dart`) limits the whole app to a centred 400 px column and sets `MediaQuery` to that width.
+- `MaxWidthFrame` (`MaterialApp.builder` in `app.dart`) limits the whole app to a centred 600 px column, with sides in the scaffold background colour, and sets `MediaQuery` to that width.
 - Entry form: the view owns the text controllers and builds an `EntryDraft`. Before saving it calls `findSimilar` and shows the confirm/dismiss dialog. A `DuplicateEntryException` result offers to open the existing entry.
 - Auth (`data/services/auth_service.dart`, `data/repositories/auth_repository.dart`): Supabase email/password, plus Google.
   - Google on desktop uses a loopback PKCE flow (`loopback_oauth.dart`, port 3693, redirect `http://127.0.0.1:3693/auth-callback` must be allowed in Supabase Auth URL config).
