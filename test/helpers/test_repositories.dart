@@ -54,6 +54,7 @@ class TestRepositories {
     String term, {
     String article = 'das',
     List<String> translations = const [],
+    List<String> tags = const [],
   }) async => _ok(
     await entries.add(
       EntryDraft(
@@ -62,6 +63,7 @@ class TestRepositories {
         term: term,
         forms: {'article': article},
         translations: translations,
+        tags: tags,
       ),
     ),
   );

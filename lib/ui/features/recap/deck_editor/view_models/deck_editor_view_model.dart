@@ -13,6 +13,7 @@ import '../../../../../utils/clock.dart';
 import '../../../../../utils/result.dart';
 import 'filters/added_filter_editor.dart';
 import 'filters/filter_editor.dart';
+import 'filters/tag_filter_editor.dart';
 import 'filters/word_type_filter_editor.dart';
 
 /// Creates a deck in a pack, or edits [deckId] if given. Holds one
@@ -51,6 +52,7 @@ class DeckEditorViewModel extends ChangeNotifier {
 
   late final AddedFilterEditor added;
   late final WordTypeFilterEditor wordTypes;
+  late final TagFilterEditor tags;
 
   bool get isEditing => deckId != null;
   bool get loading => _loading;
@@ -109,7 +111,8 @@ class DeckEditorViewModel extends ChangeNotifier {
 
     added = AddedFilterEditor(now: _now);
     wordTypes = WordTypeFilterEditor(_schema?.wordTypes.keys ?? const []);
-    _editors = [added, wordTypes];
+    tags = TagFilterEditor(_decks.watchTags(packId));
+    _editors = [added, wordTypes, tags];
     _kept = [
       for (final filter in _initial?.filters ?? const <DeckFilter>[])
         if (!_editors.any((editor) => editor.load(filter))) filter,

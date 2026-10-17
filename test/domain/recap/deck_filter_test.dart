@@ -61,6 +61,54 @@ void main() {
       expect(DeckFilter.fromJson(_roundTrip(filter.toJson())), filter);
     });
 
+    test('tags lists the tags sorted, with the match mode', () {
+      for (final match in TagMatch.values) {
+        final filter = DeckFilter.tags(const {'food', 'A1', 'Möbel'}, match);
+
+        expect(filter.toJson(), {
+          'type': 'tags',
+          'values': ['A1', 'Möbel', 'food'],
+          'match': match.name,
+        });
+        expect(DeckFilter.fromJson(_roundTrip(filter.toJson())), filter);
+      }
+      expect(
+        const DeckFilter.tags({'A1'}, TagMatch.all).toJson()['match'],
+        'all',
+      );
+    });
+
+    test('tags with an unknown match mode is kept as unknown', () {
+      final json = <String, Object?>{
+        'type': 'tags',
+        'values': ['A1'],
+        'match': 'none_of',
+      };
+
+      final filter = DeckFilter.fromJson(_roundTrip(json));
+
+      expect(filter, DeckFilter.unknown(json));
+      expect(filter.toJson(), json);
+    });
+
+    test('malformed tags filters are kept as unknown', () {
+      for (final json in <Map<String, Object?>>[
+        {'type': 'tags', 'match': 'any'},
+        {'type': 'tags', 'values': 'A1', 'match': 'any'},
+        {
+          'type': 'tags',
+          'values': ['A1', 2],
+          'match': 'any',
+        },
+        {
+          'type': 'tags',
+          'values': ['A1'],
+        },
+      ]) {
+        expect(DeckFilter.fromJson(_roundTrip(json)), isA<UnknownFilter>());
+      }
+    });
+
     test('an unknown type is kept verbatim', () {
       final json = {
         'type': 'tagged',

@@ -27,6 +27,11 @@ sealed class DeckFilter with _$DeckFilter {
   /// Entries whose word type is one of [types].
   const factory DeckFilter.wordTypes(Set<WordType> types) = WordTypesFilter;
 
+  /// Entries tagged with any or all (see [match]) of [tags]. Tags are
+  /// compared ignoring case and spacing, but not diacritics (see
+  /// `duplicateKey`). An empty set matches nothing.
+  const factory DeckFilter.tags(Set<String> tags, TagMatch match) = TagsFilter;
+
   /// A filter type this app version does not know. Matches nothing.
   const factory DeckFilter.unknown(Map<String, Object?> json) = UnknownFilter;
 
@@ -40,6 +45,7 @@ sealed class DeckFilter with _$DeckFilter {
           (json['days']! as num).toInt(),
         ),
         'word_types' => _wordTypesFromJson(json),
+        'tags' => _tagsFromJson(json),
         _ => DeckFilter.unknown(json),
       };
 
@@ -60,8 +66,27 @@ sealed class DeckFilter with _$DeckFilter {
           if (types.contains(type)) type.name,
       ],
     },
+    TagsFilter(:final tags, :final match) => {
+      'type': 'tags',
+      'values': [...tags]..sort(),
+      'match': match.name,
+    },
     UnknownFilter(:final json) => json,
   };
+}
+
+/// Whether a [TagsFilter] needs one of its tags on an entry, or all of them.
+enum TagMatch { any, all }
+
+/// A match mode written by a newer app version, or a malformed filter, makes
+/// it [UnknownFilter], so the deck still loads (and matches nothing) here.
+DeckFilter _tagsFromJson(Map<String, Object?> json) {
+  final values = json['values'];
+  final match = TagMatch.values.asNameMap()[json['match']];
+  if (match == null || values is! List || values.any((v) => v is! String)) {
+    return DeckFilter.unknown(json);
+  }
+  return DeckFilter.tags(values.cast<String>().toSet(), match);
 }
 
 /// A word type written by a newer app version makes the whole filter

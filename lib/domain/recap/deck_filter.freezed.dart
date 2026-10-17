@@ -56,13 +56,14 @@ extension DeckFilterPatterns on DeckFilter {
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeMap<TResult extends Object?>({TResult Function( AddedBetween value)?  addedBetween,TResult Function( AddedInLastDays value)?  addedInLastDays,TResult Function( WordTypesFilter value)?  wordTypes,TResult Function( UnknownFilter value)?  unknown,required TResult orElse(),}){
+@optionalTypeArgs TResult maybeMap<TResult extends Object?>({TResult Function( AddedBetween value)?  addedBetween,TResult Function( AddedInLastDays value)?  addedInLastDays,TResult Function( WordTypesFilter value)?  wordTypes,TResult Function( TagsFilter value)?  tags,TResult Function( UnknownFilter value)?  unknown,required TResult orElse(),}){
 final _that = this;
 switch (_that) {
 case AddedBetween() when addedBetween != null:
 return addedBetween(_that);case AddedInLastDays() when addedInLastDays != null:
 return addedInLastDays(_that);case WordTypesFilter() when wordTypes != null:
-return wordTypes(_that);case UnknownFilter() when unknown != null:
+return wordTypes(_that);case TagsFilter() when tags != null:
+return tags(_that);case UnknownFilter() when unknown != null:
 return unknown(_that);case _:
   return orElse();
 
@@ -81,13 +82,14 @@ return unknown(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult map<TResult extends Object?>({required TResult Function( AddedBetween value)  addedBetween,required TResult Function( AddedInLastDays value)  addedInLastDays,required TResult Function( WordTypesFilter value)  wordTypes,required TResult Function( UnknownFilter value)  unknown,}){
+@optionalTypeArgs TResult map<TResult extends Object?>({required TResult Function( AddedBetween value)  addedBetween,required TResult Function( AddedInLastDays value)  addedInLastDays,required TResult Function( WordTypesFilter value)  wordTypes,required TResult Function( TagsFilter value)  tags,required TResult Function( UnknownFilter value)  unknown,}){
 final _that = this;
 switch (_that) {
 case AddedBetween():
 return addedBetween(_that);case AddedInLastDays():
 return addedInLastDays(_that);case WordTypesFilter():
-return wordTypes(_that);case UnknownFilter():
+return wordTypes(_that);case TagsFilter():
+return tags(_that);case UnknownFilter():
 return unknown(_that);}
 }
 /// A variant of `map` that fallback to returning `null`.
@@ -102,13 +104,14 @@ return unknown(_that);}
 /// }
 /// ```
 
-@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>({TResult? Function( AddedBetween value)?  addedBetween,TResult? Function( AddedInLastDays value)?  addedInLastDays,TResult? Function( WordTypesFilter value)?  wordTypes,TResult? Function( UnknownFilter value)?  unknown,}){
+@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>({TResult? Function( AddedBetween value)?  addedBetween,TResult? Function( AddedInLastDays value)?  addedInLastDays,TResult? Function( WordTypesFilter value)?  wordTypes,TResult? Function( TagsFilter value)?  tags,TResult? Function( UnknownFilter value)?  unknown,}){
 final _that = this;
 switch (_that) {
 case AddedBetween() when addedBetween != null:
 return addedBetween(_that);case AddedInLastDays() when addedInLastDays != null:
 return addedInLastDays(_that);case WordTypesFilter() when wordTypes != null:
-return wordTypes(_that);case UnknownFilter() when unknown != null:
+return wordTypes(_that);case TagsFilter() when tags != null:
+return tags(_that);case UnknownFilter() when unknown != null:
 return unknown(_that);case _:
   return null;
 
@@ -126,12 +129,13 @@ return unknown(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>({TResult Function( DateTime? from,  DateTime? to)?  addedBetween,TResult Function( int days)?  addedInLastDays,TResult Function( Set<WordType> types)?  wordTypes,TResult Function( Map<String, Object?> json)?  unknown,required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>({TResult Function( DateTime? from,  DateTime? to)?  addedBetween,TResult Function( int days)?  addedInLastDays,TResult Function( Set<WordType> types)?  wordTypes,TResult Function( Set<String> tags,  TagMatch match)?  tags,TResult Function( Map<String, Object?> json)?  unknown,required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case AddedBetween() when addedBetween != null:
 return addedBetween(_that.from,_that.to);case AddedInLastDays() when addedInLastDays != null:
 return addedInLastDays(_that.days);case WordTypesFilter() when wordTypes != null:
-return wordTypes(_that.types);case UnknownFilter() when unknown != null:
+return wordTypes(_that.types);case TagsFilter() when tags != null:
+return tags(_that.tags,_that.match);case UnknownFilter() when unknown != null:
 return unknown(_that.json);case _:
   return orElse();
 
@@ -150,12 +154,13 @@ return unknown(_that.json);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>({required TResult Function( DateTime? from,  DateTime? to)  addedBetween,required TResult Function( int days)  addedInLastDays,required TResult Function( Set<WordType> types)  wordTypes,required TResult Function( Map<String, Object?> json)  unknown,}) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>({required TResult Function( DateTime? from,  DateTime? to)  addedBetween,required TResult Function( int days)  addedInLastDays,required TResult Function( Set<WordType> types)  wordTypes,required TResult Function( Set<String> tags,  TagMatch match)  tags,required TResult Function( Map<String, Object?> json)  unknown,}) {final _that = this;
 switch (_that) {
 case AddedBetween():
 return addedBetween(_that.from,_that.to);case AddedInLastDays():
 return addedInLastDays(_that.days);case WordTypesFilter():
-return wordTypes(_that.types);case UnknownFilter():
+return wordTypes(_that.types);case TagsFilter():
+return tags(_that.tags,_that.match);case UnknownFilter():
 return unknown(_that.json);}
 }
 /// A variant of `when` that fallback to returning `null`
@@ -170,12 +175,13 @@ return unknown(_that.json);}
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>({TResult? Function( DateTime? from,  DateTime? to)?  addedBetween,TResult? Function( int days)?  addedInLastDays,TResult? Function( Set<WordType> types)?  wordTypes,TResult? Function( Map<String, Object?> json)?  unknown,}) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>({TResult? Function( DateTime? from,  DateTime? to)?  addedBetween,TResult? Function( int days)?  addedInLastDays,TResult? Function( Set<WordType> types)?  wordTypes,TResult? Function( Set<String> tags,  TagMatch match)?  tags,TResult? Function( Map<String, Object?> json)?  unknown,}) {final _that = this;
 switch (_that) {
 case AddedBetween() when addedBetween != null:
 return addedBetween(_that.from,_that.to);case AddedInLastDays() when addedInLastDays != null:
 return addedInLastDays(_that.days);case WordTypesFilter() when wordTypes != null:
-return wordTypes(_that.types);case UnknownFilter() when unknown != null:
+return wordTypes(_that.types);case TagsFilter() when tags != null:
+return tags(_that.tags,_that.match);case UnknownFilter() when unknown != null:
 return unknown(_that.json);case _:
   return null;
 
@@ -390,6 +396,82 @@ class _$WordTypesFilterCopyWithImpl<$Res>
   return _then(WordTypesFilter(
 null == types ? _self._types : types // ignore: cast_nullable_to_non_nullable
 as Set<WordType>,
+  ));
+}
+
+
+}
+
+/// @nodoc
+
+
+class TagsFilter extends DeckFilter {
+  const TagsFilter( Set<String> tags, this.match): _tags = tags,super._();
+  
+
+ final  Set<String> _tags;
+ Set<String> get tags {
+  if (_tags is EqualUnmodifiableSetView) return _tags;
+  // ignore: implicit_dynamic_type
+  return EqualUnmodifiableSetView(_tags);
+}
+
+ final  TagMatch match;
+
+/// Create a copy of DeckFilter
+/// with the given fields replaced by the non-null parameter values.
+@JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+$TagsFilterCopyWith<TagsFilter> get copyWith => _$TagsFilterCopyWithImpl<TagsFilter>(this, _$identity);
+
+
+
+@override
+bool operator ==(Object other) {
+    return identical(this, other) || (other.runtimeType == runtimeType&&other is TagsFilter&&const DeepCollectionEquality().equals(other.tags, _tags)&&(identical(other.match, match) || other.match == match));
+}
+
+
+@override
+int get hashCode {
+    return Object.hash(runtimeType,const DeepCollectionEquality().hash(_tags),match);
+}
+
+@override
+String toString() {
+    return 'DeckFilter.tags(tags: $tags, match: $match)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class $TagsFilterCopyWith<$Res> implements $DeckFilterCopyWith<$Res> {
+  factory $TagsFilterCopyWith(TagsFilter value, $Res Function(TagsFilter) _then) = _$TagsFilterCopyWithImpl;
+@useResult
+$Res call({
+ Set<String> tags, TagMatch match
+});
+
+
+
+
+}
+/// @nodoc
+class _$TagsFilterCopyWithImpl<$Res>
+    implements $TagsFilterCopyWith<$Res> {
+  _$TagsFilterCopyWithImpl(this._self, this._then);
+
+  final TagsFilter _self;
+  final $Res Function(TagsFilter) _then;
+
+/// Create a copy of DeckFilter
+/// with the given fields replaced by the non-null parameter values.
+@pragma('vm:prefer-inline') $Res call({Object? tags = null,Object? match = null,}) {
+  return _then(TagsFilter(
+null == tags ? _self._tags : tags // ignore: cast_nullable_to_non_nullable
+as Set<String>,null == match ? _self.match : match // ignore: cast_nullable_to_non_nullable
+as TagMatch,
   ));
 }
 

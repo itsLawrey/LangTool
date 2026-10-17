@@ -5,6 +5,7 @@ import '../../domain/models/deck.dart';
 import '../../domain/models/deck_draft.dart';
 import '../../domain/models/entry.dart';
 import '../../domain/recap/deck_filter.dart';
+import '../../domain/search/text_normalizer.dart';
 import '../../utils/clock.dart';
 import '../../utils/result.dart';
 import '../local/app_database.dart';
@@ -45,6 +46,12 @@ abstract interface class DeckRepository {
     List<DeckFilter> filters, {
     required int limit,
   });
+
+  /// The distinct tags of the active entries of [packId], for the tag
+  /// filter, sorted ignoring case and updated whenever entries change. Tags
+  /// that differ only in case or spacing are listed once, as first written
+  /// (by the oldest entry).
+  Stream<List<String>> watchTags(String packId);
 }
 
 class LocalDeckRepository implements DeckRepository {
@@ -191,11 +198,38 @@ class LocalDeckRepository implements DeckRepository {
     );
   }
 
+  @override
+  Stream<List<String>> watchTags(String packId) {
+    final query = _db.selectOnly(_db.entries)
+      ..addColumns([_db.entries.tags])
+      ..where(
+        _db.entries.packId.equals(packId) & _db.entries.deletedAt.isNull(),
+      )
+      ..orderBy([
+        OrderingTerm.asc(_db.entries.createdAt),
+        OrderingTerm.asc(_db.entries.id),
+      ]);
+    return query.watch().map((rows) {
+      final byKey = <String, String>{};
+      for (final row in rows) {
+        for (final tag in row.readWithConverter(_db.entries.tags)!) {
+          byKey.putIfAbsent(duplicateKey(tag), () => tag);
+        }
+      }
+      return byKey.values.toList()..sort(_compareTags);
+    });
+  }
+
   /// Active entries of [packId] matching every filter.
   Expression<bool> _matching(String packId, List<DeckFilter> filters) =>
       _db.entries.packId.equals(packId) &
       _db.entries.deletedAt.isNull() &
       deckFiltersCondition(filters, _db.entries, now: _clock());
+
+  static int _compareTags(String a, String b) {
+    final byKey = a.toLowerCase().compareTo(b.toLowerCase());
+    return byKey != 0 ? byKey : a.compareTo(b);
+  }
 
   Future<LanguagePackRow?> _activePack(String id) => (_db.select(
     _db.languagePacks,
