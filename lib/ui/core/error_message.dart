@@ -17,6 +17,8 @@ String errorMessage(Exception error, {String languageCode = 'de'}) =>
             .join('\n'),
       InvalidDeckNameException() => 'The deck name is required.',
       InvalidPackNameException() => 'The pack name is required.',
+      LanguageMismatchException() =>
+        'Entries can only go to packs of the same language.',
       MergePacksException(:final reason) => switch (reason) {
         MergePacksProblem.tooFewPacks => 'Select at least two packs.',
         MergePacksProblem.mixedLanguages =>

@@ -112,16 +112,18 @@ void main() {
 
     // Edit from the detail view.
     await tapText(tester, 'das Haus');
-    await tester.tap(find.byTooltip('Edit'));
-    await wait(tester);
+    await tester.tap(find.byTooltip('Entry actions').last);
+    await wait(tester, 5);
+    await tapText(tester, 'Edit');
     await enter(tester, 'Notes', 'neuter');
     await tester.tap(find.widgetWithText(FilledButton, 'Save'));
     await wait(tester);
     expect(find.text('neuter'), findsOneWidget);
 
     // Delete it.
-    await tester.tap(find.byTooltip('Delete'));
+    await tester.tap(find.byTooltip('Entry actions').last);
     await wait(tester, 5);
+    await tapText(tester, 'Delete');
     await tester.tap(find.widgetWithText(FilledButton, 'Delete'));
     await wait(tester);
     expect(find.text('das Haus'), findsNothing);
@@ -391,6 +393,45 @@ void main() {
     expect(find.text('house, home'), findsOneWidget);
     await tapText(tester, 'der Haus');
     expect(find.textContaining('Article (from Alltag): das'), findsOneWidget);
+
+    await tester.pumpWidget(const SizedBox());
+    await database.close();
+  });
+
+  testWidgets('move an entry to another pack from its card', (tester) async {
+    auth.emitSignedIn();
+    await tester.pumpWidget(
+      AppScope(
+        dependencies: AppDependencies(
+          database: database,
+          authService: auth,
+          syncApi: server,
+        ),
+      ),
+    );
+    await wait(tester);
+
+    for (final pack in ['Alltag', 'Reise']) {
+      await tapText(tester, 'New pack');
+      await tester.enterText(find.byType(TextField), pack);
+      await tapText(tester, 'Create');
+    }
+    await tapText(tester, 'Alltag');
+    await addNoun(tester, 'Haus', 'house');
+    expect(find.text('Noun'), findsOneWidget);
+
+    // The card's corner menu moves it to Reise.
+    await tester.tap(find.byTooltip('Entry actions'));
+    await wait(tester, 5);
+    await tapText(tester, 'Move to…');
+    await tapText(tester, 'Reise');
+    expect(find.text('Moved to "Reise".'), findsOneWidget);
+    expect(find.text('das Haus'), findsNothing);
+
+    await tester.pageBack();
+    await wait(tester);
+    await tapText(tester, 'Reise');
+    expect(find.text('das Haus'), findsOneWidget);
 
     await tester.pumpWidget(const SizedBox());
     await database.close();

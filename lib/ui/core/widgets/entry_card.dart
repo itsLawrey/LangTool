@@ -13,11 +13,15 @@ class EntryCard extends StatelessWidget {
     required this.entry,
     required this.schema,
     required this.onTap,
+    this.menu,
   });
 
   final Entry entry;
   final LanguageSchema? schema;
   final VoidCallback onTap;
+
+  /// Shown in the top-right corner, after the word type.
+  final Widget? menu;
 
   @override
   Widget build(BuildContext context) {
@@ -30,27 +34,34 @@ class EntryCard extends StatelessWidget {
       child: InkWell(
         onTap: onTap,
         child: Padding(
-          padding: const EdgeInsets.all(12),
+          padding: EdgeInsets.fromLTRB(12, 12, menu == null ? 12 : 4, 12),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             spacing: 4,
             children: [
               Row(
-                crossAxisAlignment: CrossAxisAlignment.baseline,
-                textBaseline: TextBaseline.alphabetic,
                 children: [
                   Expanded(
-                    child: Text(
-                      headword(entry),
-                      style: theme.textTheme.titleMedium,
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.baseline,
+                      textBaseline: TextBaseline.alphabetic,
+                      children: [
+                        Expanded(
+                          child: Text(
+                            headword(entry),
+                            style: theme.textTheme.titleMedium,
+                          ),
+                        ),
+                        Text(
+                          wordTypeLabel(entry.wordType),
+                          style: theme.textTheme.labelMedium?.copyWith(
+                            color: theme.colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                  Text(
-                    wordTypeLabel(entry.wordType),
-                    style: theme.textTheme.labelMedium?.copyWith(
-                      color: theme.colorScheme.onSurfaceVariant,
-                    ),
-                  ),
+                  ?menu,
                 ],
               ),
               if (forms.isNotEmpty)

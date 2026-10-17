@@ -2,6 +2,7 @@ import 'package:drift/drift.dart';
 
 import '../../domain/exceptions.dart';
 import '../../domain/languages/language_registry.dart';
+import '../../domain/merge/entry_merge.dart';
 import '../../domain/models/clean_entry.dart';
 import '../../domain/models/entry.dart';
 import '../../domain/models/entry_draft.dart';
@@ -39,6 +40,22 @@ abstract interface class EntryRepository {
   Future<Result<Entry>> update(Entry entry);
 
   Future<Result<void>> delete(String id);
+
+  /// Copies the entry [id] to pack [targetPackId] of the same language,
+  /// keeping its creation time, or with [move] moves the entry itself there.
+  ///
+  /// If the target pack already has the same entry (word type and
+  /// [duplicateKey]), fails with [DuplicateEntryException] unless [combine]
+  /// is given. Then the two are combined into the existing entry with
+  /// [mergeEntries] ([combine] words the notes for differing forms), and a
+  /// moved entry is deleted. Fails with [NotFoundException] (entry or pack),
+  /// [LanguageMismatchException] or [InvalidEntryException].
+  Future<Result<Entry>> transfer(
+    String id, {
+    required String targetPackId,
+    required bool move,
+    String Function(FormClash clash)? combine,
+  });
 
   /// Searches the term and translations of [packId]'s entries.
   ///
@@ -171,6 +188,64 @@ class LocalEntryRepository implements EntryRepository {
         ? Result.error(NotFoundException(id))
         : const Result.ok(null);
   }
+
+  @override
+  Future<Result<Entry>> transfer(
+    String id, {
+    required String targetPackId,
+    required bool move,
+    String Function(FormClash clash)? combine,
+  }) => _db.transaction(() async {
+    final source = (await _activeById(id))?.toDomain();
+    if (source == null) return Result.error(NotFoundException(id));
+    final sourcePack = await _activePack(source.packId);
+    if (sourcePack == null) {
+      return Result.error(NotFoundException(source.packId));
+    }
+    final target = await _activePack(targetPackId);
+    if (target == null) return Result.error(NotFoundException(targetPackId));
+    if (target.id == sourcePack.id) return Result.ok(source);
+    if (target.languageCode != sourcePack.languageCode) {
+      return const Result.error(LanguageMismatchException());
+    }
+
+    final now = _clock();
+    final moved = source.copyWith(
+      id: move ? source.id : _newId(),
+      packId: target.id,
+      updatedAt: now,
+    );
+    final duplicate = (await _findDuplicate(moved))?.toDomain();
+    if (duplicate == null) return _save(moved, target, insert: !move);
+    if (combine == null) {
+      return Result.error(DuplicateEntryException(duplicate));
+    }
+
+    final schema = languageSchemaFor(target.languageCode);
+    if (schema == null) {
+      return Result.error(UnsupportedLanguageException(target.languageCode));
+    }
+    // The server keeps a row's creation time, so the existing entry keeps
+    // its own.
+    final combined = mergeEntries(
+      [
+        (entry: duplicate, packName: target.name, packOrder: 0),
+        (entry: source, packName: sourcePack.name, packOrder: 1),
+      ],
+      id: duplicate.id,
+      ownerId: duplicate.ownerId,
+      packId: target.id,
+      schemaVersion: schema.version,
+      updatedAt: now,
+      describeClash: combine,
+    ).copyWith(createdAt: duplicate.createdAt);
+    final issues = schema.validate(combined);
+    if (issues.isNotEmpty) return Result.error(InvalidEntryException(issues));
+
+    await _db.update(_db.entries).replace(combined.toCompanion());
+    if (move) await delete(source.id);
+    return Result.ok(combined);
+  });
 
   @override
   Future<List<SearchResult>> search(String packId, String query) async {

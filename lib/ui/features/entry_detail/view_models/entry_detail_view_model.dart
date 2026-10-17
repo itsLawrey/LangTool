@@ -36,8 +36,6 @@ class EntryDetailViewModel extends ChangeNotifier {
   LanguageSchema? get schema => _schema;
   bool get loading => _loading;
 
-  Future<Result<void>> delete() => _entries.delete(entryId);
-
   Future<void> _load() async {
     if (_schema == null) {
       if (await _packs.getPack(packId) case Ok(:final value)) {

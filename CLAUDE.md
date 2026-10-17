@@ -52,6 +52,10 @@ Layered per Flutter's official architecture guide (MVVM with `provider` and `go_
   - Keep files small and split widgets into their own files.
   - UI strings live in the UI layer: `labels.dart` (field and word-type labels, validation messages) and `error_message.dart` (maps repository exceptions).
 - Timeline: `TimelineViewModel` watches `EntryRepository.watchTimeline(limit)` through `PagedEntries` (`ui/core/paged_entries.dart`), which grows `limit` by `pageSize` as the list nears the end. `EntryTimelineView` (`ui/core/widgets/`, shared with the deck page) builds the day headers and `EntryCard`s lazily with `ListView.builder`, so both DB reads and rendering are paged. A search query switches the source to `search()` hits, shown best match first without day headers. It re-runs on `watchChanges()`.
+- **Entry actions** (`ui/core/entry_actions/`): the ⋮ menu has Edit, Move to…, Copy to… and Delete. It sits in each `EntryCard`'s corner (after the word type; `EntryTimelineView` adds it) and on the entry screen's app bar.
+  - `runEntryAction` runs the dialogs (pack picker, delete confirmation) and calls `EntryRepository` directly.
+  - If the target pack already has the entry, it asks, then retries with `combine` (the merge rules).
+  - `onGone` runs after a delete or move; the entry screen uses it to pop.
 - Entry form: the view owns the text controllers and builds an `EntryDraft`. Before saving it calls `findSimilar` and shows the confirm/dismiss dialog. A `DuplicateEntryException` result offers to open the existing entry.
 - Auth (`data/services/auth_service.dart`, `data/repositories/auth_repository.dart`): Supabase email/password, plus Google.
   - Google on desktop uses a loopback PKCE flow (`loopback_oauth.dart`, port 3693, redirect `http://127.0.0.1:3693/auth-callback` must be allowed in Supabase Auth URL config).
@@ -115,6 +119,7 @@ Layered per Flutter's official architecture guide (MVVM with `provider` and `go_
   - `EntryRepository.add`/`update` validate against the pack's `LanguageSchema`, then the duplicate rule.
   - `search` runs a SQL `LIKE` on the normalized columns for direct matches. Only if there are none, it scores a lightweight `(id, keys)` projection in Dart for fuzzy matches.
   - `DeckRepository.watchMatchCount` is a live SQL `count()` for the deck editor; `matchingEntries` loads a deck's entries, oldest first.
+  - `EntryRepository.transfer` copies an entry to another pack of the same language (new id, same `createdAt`), or moves it there (same row with a new `pack_id`). A duplicate in the target fails with `DuplicateEntryException` unless `combine` is given. Then `mergeEntries` folds it into the existing entry, which keeps its `createdAt` because the server never changes `created_at`, and a moved source is deleted.
   - Deletes are soft. Deleting a pack soft-deletes its entries and decks.
   - Clock and id generator are injectable (`lib/utils/clock.dart`; ids are UUID v7).
 - Tests use an in-memory DB: `AppDatabase(NativeDatabase.memory())`.

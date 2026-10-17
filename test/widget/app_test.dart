@@ -146,7 +146,7 @@ void main() {
 
     router.go(Routes.entry(packId, entryId));
     await settle(tester);
-    expect(find.byTooltip('Edit'), findsOneWidget);
+    expect(find.byTooltip('Entry actions'), findsOneWidget);
 
     router.go(Routes.editEntry(packId, entryId));
     await settle(tester);

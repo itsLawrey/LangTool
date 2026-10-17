@@ -138,7 +138,7 @@ void main() {
     await tester.tap(find.text('das Haus'));
     await settle(tester);
     expect(find.widgetWithText(AppBar, 'das Haus'), findsOneWidget);
-    expect(find.byTooltip('Edit'), findsOneWidget);
+    expect(find.byTooltip('Entry actions'), findsOneWidget);
     expect(find.text('Start'), findsNothing);
     expect(find.byType(NavigationBar), findsNothing);
 

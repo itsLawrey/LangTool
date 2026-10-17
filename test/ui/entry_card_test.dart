@@ -48,4 +48,40 @@ void main() {
     await tester.tap(find.byType(EntryCard));
     expect(tapped, isTrue);
   });
+
+  testWidgets('shows the menu in the corner next to the word type', (
+    tester,
+  ) async {
+    final now = DateTime.utc(2026, 10, 15);
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: EntryCard(
+            entry: Entry(
+              id: 'entry-1',
+              ownerId: 'user-1',
+              packId: 'pack-1',
+              wordType: WordType.noun,
+              term: 'Haus',
+              forms: {'article': 'das'},
+              schemaVersion: 1,
+              createdAt: now,
+              updatedAt: now,
+            ),
+            schema: german,
+            onTap: () {},
+            menu: const Icon(Icons.more_vert),
+          ),
+        ),
+      ),
+    );
+
+    final type = tester.getRect(find.text('Noun'));
+    final menu = tester.getRect(find.byIcon(Icons.more_vert));
+    expect(type.right, lessThanOrEqualTo(menu.left));
+    expect(
+      menu.right,
+      greaterThan(tester.getRect(find.text('das Haus')).right),
+    );
+  });
 }

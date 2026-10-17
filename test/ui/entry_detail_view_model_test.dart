@@ -2,7 +2,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:langtool/domain/models/entry.dart';
 import 'package:langtool/domain/models/language_pack.dart';
 import 'package:langtool/ui/features/entry_detail/view_models/entry_detail_view_model.dart';
-import 'package:langtool/utils/result.dart';
 
 import '../helpers/test_repositories.dart';
 
@@ -55,11 +54,11 @@ void main() {
     await settle(() => viewModel.entry?.translations.single == 'home');
   });
 
-  test('deletes the entry', () async {
+  test('clears the entry once it is deleted', () async {
     final viewModel = create(haus.id);
     await settle(() => !viewModel.loading);
 
-    expect(await viewModel.delete(), isA<Ok<void>>());
+    await repos.entries.delete(haus.id);
 
     await settle(() => viewModel.entry == null);
   });

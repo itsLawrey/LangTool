@@ -38,6 +38,14 @@ final class InvalidPackNameException implements Exception {
   String toString() => 'InvalidPackNameException()';
 }
 
+/// The target pack is of a different language.
+final class LanguageMismatchException implements Exception {
+  const LanguageMismatchException();
+
+  @override
+  String toString() => 'LanguageMismatchException()';
+}
+
 /// Why the selected packs cannot be merged.
 enum MergePacksProblem {
   /// Fewer than two packs are selected.
