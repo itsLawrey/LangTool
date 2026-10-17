@@ -15,6 +15,7 @@ String errorMessage(Exception error, {String languageCode = 'de'}) =>
         issues
             .map((issue) => validationMessage(languageCode, issue))
             .join('\n'),
+      InvalidDeckNameException() => 'The deck name is required.',
       InvalidPackNameException() => 'The pack name is required.',
       NotFoundException() => 'It no longer exists.',
       UnsupportedLanguageException(:final languageCode) =>

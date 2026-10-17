@@ -17,15 +17,21 @@ import 'fake_remote_sync_api.dart';
 import 'test_repositories.dart';
 
 /// Pumps [routes] in a [MaterialApp.router] with [repos] and [providers]
-/// provided, starting at [initialLocation].
+/// provided, starting at [initialLocation]. [navigatorKey] is the root
+/// navigator's key, for routes that are placed on it from within a shell.
 Future<GoRouter> pumpRoutes(
   WidgetTester tester, {
   required TestRepositories repos,
   required List<RouteBase> routes,
   List<SingleChildWidget> providers = const [],
   String initialLocation = '/',
+  GlobalKey<NavigatorState>? navigatorKey,
 }) async {
-  final router = GoRouter(initialLocation: initialLocation, routes: routes);
+  final router = GoRouter(
+    navigatorKey: navigatorKey,
+    initialLocation: initialLocation,
+    routes: routes,
+  );
   await tester.pumpWidget(
     MultiProvider(
       providers: [
