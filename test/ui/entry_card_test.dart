@@ -3,7 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:langtool/domain/languages/german.dart';
 import 'package:langtool/domain/models/entry.dart';
 import 'package:langtool/domain/models/word_type.dart';
-import 'package:langtool/ui/features/timeline/views/entry_card.dart';
+import 'package:langtool/ui/core/widgets/entry_card.dart';
 
 void main() {
   testWidgets('shows headword, type, forms, translations and tags', (

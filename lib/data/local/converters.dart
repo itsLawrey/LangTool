@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:drift/drift.dart';
 
 import '../../domain/models/entry.dart';
+import '../../domain/recap/deck_filter.dart';
 
 /// Stores a `Map<String, String>` as a JSON object.
 class StringMapConverter extends TypeConverter<Map<String, String>, String> {
@@ -41,4 +42,20 @@ class ExampleListConverter extends TypeConverter<List<Example>, String> {
   @override
   String toSql(List<Example> value) =>
       jsonEncode([for (final example in value) example.toJson()]);
+}
+
+/// Stores a `List<DeckFilter>` as a JSON array of objects, in the same shape
+/// as `Deck.filters` in JSON.
+class DeckFilterListConverter extends TypeConverter<List<DeckFilter>, String> {
+  const DeckFilterListConverter();
+
+  @override
+  List<DeckFilter> fromSql(String fromDb) => [
+    for (final json in jsonDecode(fromDb) as List<Object?>)
+      DeckFilter.fromJson(json! as Map<String, Object?>),
+  ];
+
+  @override
+  String toSql(List<DeckFilter> value) =>
+      jsonEncode([for (final filter in value) filter.toJson()]);
 }

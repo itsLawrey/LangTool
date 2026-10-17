@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:langtool/data/local/app_database.dart';
 import 'package:langtool/data/local/sync_store.dart';
 import 'package:langtool/data/repositories/auth_repository.dart';
+import 'package:langtool/data/repositories/deck_repository.dart';
 import 'package:langtool/data/repositories/entry_repository.dart';
 import 'package:langtool/data/repositories/language_pack_repository.dart';
 import 'package:langtool/data/repositories/sync_engine.dart';
@@ -16,20 +17,27 @@ import 'fake_remote_sync_api.dart';
 import 'test_repositories.dart';
 
 /// Pumps [routes] in a [MaterialApp.router] with [repos] and [providers]
-/// provided, starting at [initialLocation].
+/// provided, starting at [initialLocation]. [navigatorKey] is the root
+/// navigator's key, for routes that are placed on it from within a shell.
 Future<GoRouter> pumpRoutes(
   WidgetTester tester, {
   required TestRepositories repos,
   required List<RouteBase> routes,
   List<SingleChildWidget> providers = const [],
   String initialLocation = '/',
+  GlobalKey<NavigatorState>? navigatorKey,
 }) async {
-  final router = GoRouter(initialLocation: initialLocation, routes: routes);
+  final router = GoRouter(
+    navigatorKey: navigatorKey,
+    initialLocation: initialLocation,
+    routes: routes,
+  );
   await tester.pumpWidget(
     MultiProvider(
       providers: [
         Provider<LanguagePackRepository>.value(value: repos.packs),
         Provider<EntryRepository>.value(value: repos.entries),
+        Provider<DeckRepository>.value(value: repos.decks),
         ...providers,
       ],
       child: MaterialApp.router(routerConfig: router),

@@ -1,12 +1,16 @@
 import 'package:drift/drift.dart' show driftRuntimeOptions;
 import 'package:drift/native.dart';
 import 'package:langtool/data/local/app_database.dart';
+import 'package:langtool/data/repositories/deck_repository.dart';
 import 'package:langtool/data/repositories/entry_repository.dart';
 import 'package:langtool/data/repositories/language_pack_repository.dart';
+import 'package:langtool/domain/models/deck.dart';
+import 'package:langtool/domain/models/deck_draft.dart';
 import 'package:langtool/domain/models/entry.dart';
 import 'package:langtool/domain/models/entry_draft.dart';
 import 'package:langtool/domain/models/language_pack.dart';
 import 'package:langtool/domain/models/word_type.dart';
+import 'package:langtool/domain/recap/deck_filter.dart';
 import 'package:langtool/utils/result.dart';
 
 /// Repositories over an in-memory database with a controllable clock.
@@ -17,12 +21,14 @@ class TestRepositories {
     db = AppDatabase(NativeDatabase.memory());
     packs = LocalLanguagePackRepository(db, clock: clock, newId: newId);
     entries = LocalEntryRepository(db, clock: clock, newId: newId);
+    decks = LocalDeckRepository(db, clock: clock, newId: newId);
   }
 
   final String idPrefix;
   late final AppDatabase db;
   late final LanguagePackRepository packs;
   late final EntryRepository entries;
+  late final DeckRepository decks;
 
   /// The time the next write is stamped with.
   DateTime now = DateTime.utc(2026, 10, 15, 12);
@@ -51,6 +57,16 @@ class TestRepositories {
         forms: {'article': article},
         translations: translations,
       ),
+    ),
+  );
+
+  Future<Deck> createDeck(
+    LanguagePack pack,
+    String name, [
+    List<DeckFilter> filters = const [],
+  ]) async => _ok(
+    await decks.create(
+      DeckDraft(packId: pack.id, name: name, filters: filters),
     ),
   );
 

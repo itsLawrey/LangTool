@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../../../core/date_labels.dart';
+import '../date_labels.dart';
 
 class DayHeader extends StatelessWidget {
   const DayHeader({super.key, required this.day});

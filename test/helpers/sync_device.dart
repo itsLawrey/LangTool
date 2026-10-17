@@ -1,5 +1,6 @@
 import 'package:langtool/data/local/sync_store.dart';
 import 'package:langtool/data/repositories/sync_engine.dart';
+import 'package:langtool/domain/models/deck.dart';
 import 'package:langtool/domain/models/entry.dart';
 import 'package:langtool/domain/models/language_pack.dart';
 
@@ -28,6 +29,9 @@ class SyncDevice {
 
   Future<List<Entry>> entries(String packId) =>
       repos.entries.watchEntries(packId).first;
+
+  Future<List<Deck>> decks(String packId) =>
+      repos.decks.watchDecks(packId).first;
 
   Future<List<LanguagePack>> packs([String ownerId = 'user-1']) =>
       repos.packs.watchPacks(ownerId).first;

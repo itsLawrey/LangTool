@@ -22,6 +22,14 @@ final class InvalidEntryException implements Exception {
   String toString() => 'InvalidEntryException($issues)';
 }
 
+/// A deck name is blank.
+final class InvalidDeckNameException implements Exception {
+  const InvalidDeckNameException();
+
+  @override
+  String toString() => 'InvalidDeckNameException()';
+}
+
 /// A pack name is blank.
 final class InvalidPackNameException implements Exception {
   const InvalidPackNameException();

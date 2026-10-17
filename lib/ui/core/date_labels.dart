@@ -16,3 +16,6 @@ String dayLabel(DateTime day, {required DateTime now}) {
 /// Local date and time, e.g. `15 Oct 2026, 14:05`.
 String dateTimeLabel(DateTime time) =>
     DateFormat('d MMM y, HH:mm').format(time.toLocal());
+
+/// Local calendar date, e.g. `1 Oct 2026`.
+String dateLabel(DateTime day) => DateFormat('d MMM y').format(day);

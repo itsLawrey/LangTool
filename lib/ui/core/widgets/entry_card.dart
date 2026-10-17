@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 
-import '../../../../domain/languages/language_schema.dart';
-import '../../../../domain/models/entry.dart';
-import '../../../core/entry_display.dart';
-import '../../../core/labels.dart';
+import '../../../domain/languages/language_schema.dart';
+import '../../../domain/models/entry.dart';
+import '../entry_display.dart';
+import '../labels.dart';
 
 /// Summary of an entry: headword, word type, forms, translations and tags.
 /// Examples and notes are shown in the detail view.

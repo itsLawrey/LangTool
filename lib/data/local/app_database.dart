@@ -1,7 +1,9 @@
 import 'package:drift/drift.dart';
 
+import '../../domain/models/deck.dart';
 import '../../domain/models/entry.dart';
 import '../../domain/models/word_type.dart';
+import '../../domain/recap/deck_filter.dart';
 import 'app_database.steps.dart';
 import 'converters.dart';
 
@@ -69,6 +71,29 @@ class Entries extends Table {
   Set<Column<Object>> get primaryKey => {id};
 }
 
+/// Rows mirror [Deck]. [filters] is the JSON array of [DeckFilter]s; the
+/// entries a deck selects are resolved from it at query time.
+@DataClassName('DeckRow')
+@TableIndex(name: 'decks_pack_id', columns: {#packId})
+@TableIndex(name: 'decks_owner_id', columns: {#ownerId})
+class Decks extends Table {
+  TextColumn get id => text()();
+  TextColumn get ownerId => text()();
+  TextColumn get packId => text().references(LanguagePacks, #id)();
+  TextColumn get name => text()();
+  TextColumn get filters => text().map(const DeckFilterListConverter())();
+  DateTimeColumn get createdAt => dateTime()();
+  DateTimeColumn get updatedAt => dateTime()();
+  DateTimeColumn get deletedAt => dateTime().nullable()();
+
+  /// Whether this row has local changes not yet uploaded. Rows written by
+  /// the app are dirty; rows applied from the server are clean.
+  BoolColumn get needsPush => boolean().withDefault(const Constant(true))();
+
+  @override
+  Set<Column<Object>> get primaryKey => {id};
+}
+
 /// Per-account sync progress.
 @DataClassName('SyncStateRow')
 class SyncStates extends Table {
@@ -80,6 +105,9 @@ class SyncStates extends Table {
   /// Server time up to which entry changes have been pulled.
   DateTimeColumn get entriesPulledUntil => dateTime().nullable()();
 
+  /// Server time up to which deck changes have been pulled.
+  DateTimeColumn get decksPulledUntil => dateTime().nullable()();
+
   /// When the last sync finished successfully.
   DateTimeColumn get lastSyncedAt => dateTime().nullable()();
 
@@ -87,12 +115,12 @@ class SyncStates extends Table {
   Set<Column<Object>> get primaryKey => {ownerId};
 }
 
-@DriftDatabase(tables: [LanguagePacks, Entries, SyncStates])
+@DriftDatabase(tables: [LanguagePacks, Entries, Decks, SyncStates])
 class AppDatabase extends _$AppDatabase {
   AppDatabase(super.executor);
 
   @override
-  int get schemaVersion => 2;
+  int get schemaVersion => 3;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -103,6 +131,17 @@ class AppDatabase extends _$AppDatabase {
         await m.addColumn(schema.languagePacks, schema.languagePacks.needsPush);
         await m.addColumn(schema.entries, schema.entries.needsPush);
         await m.createTable(schema.syncStates);
+      },
+      // Recap decks. Their pull cursor starts empty, so the next sync
+      // downloads every deck.
+      from2To3: (m, schema) async {
+        await m.createTable(schema.decks);
+        await m.createIndex(schema.decksPackId);
+        await m.createIndex(schema.decksOwnerId);
+        await m.addColumn(
+          schema.syncStates,
+          schema.syncStates.decksPulledUntil,
+        );
       },
     ),
     beforeOpen: (details) async {

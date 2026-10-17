@@ -25,7 +25,7 @@ abstract interface class LanguagePackRepository {
   /// Fails with [InvalidPackNameException] or [NotFoundException].
   Future<Result<LanguagePack>> rename(String id, String name);
 
-  /// Soft-deletes the pack and all of its entries.
+  /// Soft-deletes the pack and all of its entries and decks.
   Future<Result<void>> delete(String id);
 }
 
@@ -120,6 +120,15 @@ class LocalLanguagePackRepository implements LanguagePackRepository {
       _db.entries,
     )..where((e) => e.packId.equals(id) & e.deletedAt.isNull())).write(
       EntriesCompanion(
+        deletedAt: Value(now),
+        updatedAt: Value(now),
+        needsPush: const Value(true),
+      ),
+    );
+    await (_db.update(
+      _db.decks,
+    )..where((d) => d.packId.equals(id) & d.deletedAt.isNull())).write(
+      DecksCompanion(
         deletedAt: Value(now),
         updatedAt: Value(now),
         needsPush: const Value(true),

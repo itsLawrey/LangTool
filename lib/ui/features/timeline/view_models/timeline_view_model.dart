@@ -10,7 +10,8 @@ import '../../../../domain/models/entry.dart';
 import '../../../../domain/models/language_pack.dart';
 import '../../../../domain/search/search_result.dart';
 import '../../../../utils/result.dart';
-import 'timeline_items.dart';
+import '../../../core/paged_entries.dart';
+import '../../../core/timeline_items.dart';
 
 /// The entries of a pack as a day-grouped timeline, newest first. Loads
 /// [pageSize] entries at a time. While a search query is set, the matching
@@ -23,10 +24,15 @@ class TimelineViewModel extends ChangeNotifier {
     this.pageSize = 50,
     this.searchDebounce = const Duration(milliseconds: 250),
   }) : _entries = entryRepository,
-       _packs = packRepository,
-       _limit = pageSize {
+       _packs = packRepository {
     _loadPack();
-    _watchTimeline();
+    _timeline = PagedEntries(
+      (limit) => _entries.watchTimeline(packId, limit: limit),
+      pageSize: pageSize,
+      onChanged: () {
+        if (!isSearching) _rebuild();
+      },
+    );
     _changes = _entries.watchChanges().listen((_) {
       if (_query.isNotEmpty) _runSearch();
     });
@@ -38,15 +44,12 @@ class TimelineViewModel extends ChangeNotifier {
   final int pageSize;
   final Duration searchDebounce;
 
-  StreamSubscription<List<Entry>>? _timeline;
+  late final PagedEntries _timeline;
   late final StreamSubscription<void> _changes;
   Timer? _debounce;
 
   LanguagePack? _pack;
   bool _packMissing = false;
-  int _limit;
-  bool _timelineLoaded = false;
-  List<Entry> _timelineEntries = const [];
 
   String _query = '';
   List<Entry>? _hits;
@@ -67,16 +70,14 @@ class TimelineViewModel extends ChangeNotifier {
   /// matches instead.
   bool get showingSimilar => isSearching && _hitsAreSimilar;
 
-  bool get loading => isSearching ? _hits == null : !_timelineLoaded;
+  bool get loading => isSearching ? _hits == null : !_timeline.loaded;
 
   /// Whether older entries may exist beyond the loaded ones.
-  bool get hasMore => !isSearching && _timelineEntries.length >= _limit;
+  bool get hasMore => !isSearching && _timeline.hasMore;
 
   /// Loads the next page of older entries.
   void loadMore() {
-    if (!hasMore) return;
-    _limit += pageSize;
-    _watchTimeline();
+    if (!isSearching) _timeline.loadMore();
   }
 
   void search(String text) {
@@ -104,15 +105,6 @@ class TimelineViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  void _watchTimeline() {
-    _timeline?.cancel();
-    _timeline = _entries.watchTimeline(packId, limit: _limit).listen((entries) {
-      _timelineEntries = entries;
-      _timelineLoaded = true;
-      if (!isSearching) _rebuild();
-    });
-  }
-
   Future<void> _runSearch() async {
     final query = _query;
     final results = await _entries.search(packId, query);
@@ -127,14 +119,14 @@ class TimelineViewModel extends ChangeNotifier {
   void _rebuild() {
     _items = isSearching
         ? [for (final entry in _hits ?? const <Entry>[]) EntryItem(entry)]
-        : buildTimeline(_timelineEntries);
+        : buildTimeline(_timeline.entries);
     notifyListeners();
   }
 
   @override
   void dispose() {
     _debounce?.cancel();
-    _timeline?.cancel();
+    _timeline.dispose();
     _changes.cancel();
     super.dispose();
   }

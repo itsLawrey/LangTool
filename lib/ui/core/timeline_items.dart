@@ -1,4 +1,4 @@
-import '../../../../domain/models/entry.dart';
+import '../../domain/models/entry.dart';
 
 /// A row of the timeline list: a day header or an entry.
 sealed class TimelineItem {

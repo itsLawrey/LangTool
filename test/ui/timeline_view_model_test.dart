@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:langtool/domain/models/language_pack.dart';
-import 'package:langtool/ui/features/timeline/view_models/timeline_items.dart';
+import 'package:langtool/ui/core/timeline_items.dart';
 import 'package:langtool/ui/features/timeline/view_models/timeline_view_model.dart';
 
 import '../helpers/test_repositories.dart';
