@@ -225,8 +225,11 @@ void main() {
     await tester.tap(find.widgetWithText(FilledButton, 'Save'));
     await wait(tester);
 
-    // The deck page starts a session after choosing the card side.
+    // The deck page lists the deck's entries and starts a session after
+    // choosing the card side.
     expect(find.text('Nomen'), findsWidgets);
+    expect(find.text('das Haus'), findsOneWidget);
+    expect(find.text('das Auto'), findsOneWidget);
     await tapText(tester, 'Start');
     expect(find.text('Card side'), findsOneWidget);
     await tapText(tester, 'German first');

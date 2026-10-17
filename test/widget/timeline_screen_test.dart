@@ -3,7 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:langtool/domain/models/language_pack.dart';
 import 'package:langtool/ui/features/timeline/view_models/timeline_view_model.dart';
-import 'package:langtool/ui/features/timeline/views/entry_card.dart';
+import 'package:langtool/ui/core/widgets/entry_card.dart';
 import 'package:langtool/ui/features/timeline/views/timeline_screen.dart';
 import 'package:provider/provider.dart';
 

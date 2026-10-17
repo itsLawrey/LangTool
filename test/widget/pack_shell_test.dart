@@ -4,7 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:langtool/domain/models/language_pack.dart';
 import 'package:langtool/routing/pack_routes.dart';
 import 'package:langtool/routing/routes.dart';
-import 'package:langtool/ui/features/timeline/views/entry_card.dart';
+import 'package:langtool/ui/core/widgets/entry_card.dart';
 
 import '../helpers/test_repositories.dart';
 import '../helpers/widget_harness.dart';
@@ -121,6 +121,40 @@ void main() {
     await settle(tester);
     expect(find.byType(NavigationBar), findsOneWidget);
     expect(find.text('No decks yet.'), findsNothing);
+    await disposeAndClose(tester, repos.db);
+  });
+
+  testWidgets('an entry opened from a deck returns to the deck', (
+    tester,
+  ) async {
+    await tester.runAsync(() async {
+      await repos.addNoun(pack, 'Haus', translations: ['house']);
+      await repos.createDeck(pack, 'Everything');
+    });
+    final router = await open(tester, Routes.recap(pack.id));
+    await tester.tap(find.text('Everything'));
+    await settle(tester);
+
+    await tester.tap(find.text('das Haus'));
+    await settle(tester);
+    expect(find.widgetWithText(AppBar, 'das Haus'), findsOneWidget);
+    expect(find.byTooltip('Edit'), findsOneWidget);
+    expect(find.text('Start'), findsNothing);
+    expect(find.byType(NavigationBar), findsNothing);
+
+    router.pop();
+    await settle(tester);
+    expect(find.text('Start'), findsOneWidget);
+    expect(find.byType(EntryCard), findsOneWidget);
+
+    router.pop();
+    await settle(tester);
+    expect(find.byType(NavigationBar), findsOneWidget);
+    expect(find.text('Everything'), findsOneWidget);
+    expect(
+      router.routerDelegate.currentConfiguration.uri.path,
+      Routes.recap(pack.id),
+    );
     await disposeAndClose(tester, repos.db);
   });
 

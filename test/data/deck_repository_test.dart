@@ -24,9 +24,12 @@ Exception _err<T>(Result<T> result) => switch (result) {
   Err(:final error) => error,
 };
 
-/// Waits until the latest value in [values] is [expected].
+/// Waits until the latest value in [values] equals [expected] (deeply, so
+/// lists compare by their elements).
 Future<void> _until<T>(List<T> values, T expected) async {
-  for (var i = 0; i < 200 && (values.isEmpty || values.last != expected); i++) {
+  bool reached() =>
+      values.isNotEmpty && equals(expected).matches(values.last, {});
+  for (var i = 0; i < 200 && !reached(); i++) {
     await Future<void>.delayed(const Duration(milliseconds: 5));
   }
   expect(values, isNotEmpty);
@@ -502,6 +505,77 @@ void main() {
 
       _ok(await repos.entries.delete(haus.id));
       await _until(counts, 1);
+    });
+  });
+
+  group('watchMatchingEntries', () {
+    const nouns = [
+      DeckFilter.wordTypes({WordType.noun}),
+    ];
+
+    /// Collects the terms of each emission of the matching entries.
+    List<List<String>> watchTerms(List<DeckFilter> filters, {int limit = 50}) {
+      final emissions = <List<String>>[];
+      final subscription = repos.decks
+          .watchMatchingEntries(pack.id, filters, limit: limit)
+          .listen(
+            (entries) => emissions.add([for (final e in entries) e.term]),
+          );
+      addTearDown(subscription.cancel);
+      return emissions;
+    }
+
+    test('lists matching entries newest first, ties by id', () async {
+      final day = DateTime.utc(2026, 10, 1, 9);
+      await addAt(day, 'Haus', wordType: WordType.noun);
+      await addAt(DateTime.utc(2026, 10, 3), 'gern');
+      await addAt(DateTime.utc(2026, 10, 5), 'Baum', wordType: WordType.noun);
+      // Same instant as Haus, created later, so it has the larger id.
+      await addAt(day, 'Auto', wordType: WordType.noun);
+
+      final emissions = watchTerms(nouns);
+
+      await _until(emissions, ['Baum', 'Auto', 'Haus']);
+    });
+
+    test('returns at most limit entries, the newest', () async {
+      for (var day = 1; day <= 5; day++) {
+        await addAt(DateTime.utc(2026, 10, day), 'Wort$day');
+      }
+
+      final emissions = watchTerms(const [], limit: 2);
+
+      await _until(emissions, ['Wort5', 'Wort4']);
+    });
+
+    test('applies every filter', () async {
+      await addAt(DateTime(2026, 10, 1, 9), 'Haus', wordType: WordType.noun);
+      await addAt(DateTime(2026, 10, 1, 10), 'gern');
+      await addAt(DateTime(2026, 10, 5, 9), 'Baum', wordType: WordType.noun);
+
+      final emissions = watchTerms([
+        DeckFilter.addedBetween(to: DateTime(2026, 10, 2)),
+        ...nouns,
+      ]);
+
+      await _until(emissions, ['Haus']);
+    });
+
+    test('updates live as entries change', () async {
+      final emissions = watchTerms(nouns);
+      await _until(emissions, <String>[]);
+
+      await addAt(DateTime.utc(2026, 10, 1), 'gern');
+      final haus = await repos.addNoun(pack, 'Haus');
+      await _until(emissions, ['Haus']);
+      await repos.addNoun(pack, 'Baum', article: 'der');
+      await _until(emissions, ['Baum', 'Haus']);
+
+      _ok(await repos.entries.update(haus.copyWith(term: 'Hütte')));
+      await _until(emissions, ['Baum', 'Hütte']);
+
+      _ok(await repos.entries.delete(haus.id));
+      await _until(emissions, ['Baum']);
     });
   });
 }

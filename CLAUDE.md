@@ -36,7 +36,7 @@ Layered per Flutter's official architecture guide (MVVM with `provider` and `go_
   - go_router doesn't allow a path parameter in a branch's default location, so `PackShell` switches tabs with `context.go`, not `goBranch`.
 - **Recap UI** (`lib/ui/features/recap/{decks,deck_detail,deck_editor}`, `lib/ui/features/recap_session`):
   - The deck list shows each deck's live entry count.
-  - The deck page offers Start, which asks for the card side and then pushes `Routes.recapSession(..., direction)`.
+  - The deck page offers Start, which asks for the card side and then pushes `Routes.recapSession(..., direction)`. Below it, the deck's entries are listed live like the timeline (`DeckRepository.watchMatchingEntries`, paged, no search). The overview is the list's first row. Tapping a card pushes `Routes.entry`, the Note branch's full-screen route.
   - The session screen and summary save nothing.
   - **Deck editor:** each filter is a `FilterEditor` (`deck_editor/view_models/filters/`) plus a section widget (`deck_editor/views/filters/`). Add a filter by writing both and registering them in `DeckEditorViewModel` and `DeckEditorForm`. Filters the editor can't edit (`unknown`, filters that match nothing) are kept unchanged.
   - Labels and summaries are in `ui/core/recap_labels.dart`.
@@ -44,7 +44,7 @@ Layered per Flutter's official architecture guide (MVVM with `provider` and `go_
   - `ui/core/` holds shared labels, display helpers, dialogs and the theme.
   - Keep files small and split widgets into their own files.
   - UI strings live in the UI layer: `labels.dart` (field and word-type labels, validation messages) and `error_message.dart` (maps repository exceptions).
-- Timeline: `TimelineViewModel` watches `EntryRepository.watchTimeline(limit)` and grows `limit` by `pageSize` as `TimelineList` nears the end. `ListView.builder` builds rows lazily, so both DB reads and rendering are paged. A search query switches the source to `search()` hits, still shown day-grouped and newest first. It re-runs on `watchChanges()`.
+- Timeline: `TimelineViewModel` watches `EntryRepository.watchTimeline(limit)` through `PagedEntries` (`ui/core/paged_entries.dart`), which grows `limit` by `pageSize` as the list nears the end. `EntryTimelineView` (`ui/core/widgets/`, shared with the deck page) builds the day headers and `EntryCard`s lazily with `ListView.builder`, so both DB reads and rendering are paged. A search query switches the source to `search()` hits, still shown day-grouped and newest first. It re-runs on `watchChanges()`.
 - Entry form: the view owns the text controllers and builds an `EntryDraft`. Before saving it calls `findSimilar` and shows the confirm/dismiss dialog. A `DuplicateEntryException` result offers to open the existing entry.
 - Auth (`data/services/auth_service.dart`, `data/repositories/auth_repository.dart`): Supabase email/password, plus Google.
   - Google on desktop uses a loopback PKCE flow (`loopback_oauth.dart`, port 3693, redirect `http://127.0.0.1:3693/auth-callback` must be allowed in Supabase Auth URL config).

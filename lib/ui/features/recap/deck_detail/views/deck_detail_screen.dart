@@ -6,6 +6,7 @@ import '../../../../../routing/routes.dart';
 import '../../../../../utils/result.dart';
 import '../../../../core/error_message.dart';
 import '../../../../core/widgets/confirm_dialog.dart';
+import '../../../../core/widgets/entry_timeline_view.dart';
 import '../view_models/deck_detail_view_model.dart';
 import 'deck_overview.dart';
 
@@ -44,7 +45,15 @@ class DeckDetailScreen extends StatelessWidget {
         DeckDetailViewModel(deck: null) => const Center(
           child: Text('This deck no longer exists.'),
         ),
-        _ => DeckOverview(viewModel: viewModel),
+        _ => EntryTimelineView(
+          header: DeckOverview(viewModel: viewModel),
+          items: viewModel.items,
+          hasMore: viewModel.hasMore,
+          onLoadMore: viewModel.loadMore,
+          schema: viewModel.schema,
+          onTapEntry: (entry) =>
+              context.push(Routes.entry(viewModel.packId, entry.id)),
+        ),
       },
     );
   }

@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:langtool/domain/models/entry.dart';
 import 'package:langtool/domain/models/word_type.dart';
-import 'package:langtool/ui/features/timeline/view_models/timeline_items.dart';
+import 'package:langtool/ui/core/timeline_items.dart';
 
 Entry _entry(String term, DateTime createdAt) => Entry(
   id: term,

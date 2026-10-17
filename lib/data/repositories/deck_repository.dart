@@ -37,6 +37,14 @@ abstract interface class DeckRepository {
 
   /// Active entries of [packId] matching all [filters].
   Future<List<Entry>> matchingEntries(String packId, List<DeckFilter> filters);
+
+  /// The newest [limit] active entries of [packId] matching all [filters],
+  /// newest first, updated whenever entries change.
+  Stream<List<Entry>> watchMatchingEntries(
+    String packId,
+    List<DeckFilter> filters, {
+    required int limit,
+  });
 }
 
 class LocalDeckRepository implements DeckRepository {
@@ -163,6 +171,24 @@ class LocalDeckRepository implements DeckRepository {
         (e) => OrderingTerm.asc(e.id),
       ]);
     return [for (final row in await query.get()) row.toDomain()];
+  }
+
+  @override
+  Stream<List<Entry>> watchMatchingEntries(
+    String packId,
+    List<DeckFilter> filters, {
+    required int limit,
+  }) {
+    final query = _db.select(_db.entries)
+      ..where((_) => _matching(packId, filters))
+      ..orderBy([
+        (e) => OrderingTerm.desc(e.createdAt),
+        (e) => OrderingTerm.desc(e.id),
+      ])
+      ..limit(limit);
+    return query.watch().map(
+      (rows) => [for (final row in rows) row.toDomain()],
+    );
   }
 
   /// Active entries of [packId] matching every filter.

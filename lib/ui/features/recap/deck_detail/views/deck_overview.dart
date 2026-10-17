@@ -6,7 +6,8 @@ import '../../../../core/recap_labels.dart';
 import '../view_models/deck_detail_view_model.dart';
 import 'recap_direction_dialog.dart';
 
-/// The deck's filters, its number of entries and the Start button.
+/// The deck's filters, its number of entries and the Start button, shown
+/// above the matching entries.
 class DeckOverview extends StatelessWidget {
   const DeckOverview({super.key, required this.viewModel});
 
@@ -29,8 +30,8 @@ class DeckOverview extends StatelessWidget {
     final deck = viewModel.deck!;
     final count = viewModel.count;
 
-    return ListView(
-      padding: const EdgeInsets.all(16),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Text(
           deckFiltersSummary(deck.filters),
