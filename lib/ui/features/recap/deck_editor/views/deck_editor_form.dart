@@ -9,6 +9,7 @@ import '../../../../core/recap_labels.dart';
 import '../view_models/deck_editor_view_model.dart';
 import 'filters/added_filter_section.dart';
 import 'filters/kept_filter_tile.dart';
+import 'filters/tag_filter_section.dart';
 import 'filters/word_type_filter_section.dart';
 
 /// The deck name, its filters and the number of entries they match. Owns
@@ -73,6 +74,8 @@ class _DeckEditorFormState extends State<DeckEditorForm> {
         AddedFilterSection(editor: viewModel.added),
         const SizedBox(height: 24),
         WordTypeFilterSection(editor: viewModel.wordTypes),
+        const SizedBox(height: 24),
+        TagFilterSection(editor: viewModel.tags),
         for (final filter in viewModel.keptFilters)
           KeptFilterTile(filter: filter),
         const SizedBox(height: 24),

@@ -29,6 +29,9 @@ void main() {
       ),
     ],
     'added in the last days': const [DeckFilter.addedInLastDays(7)],
+    'tags': const [
+      DeckFilter.tags({'a1', 'Food'}, TagMatch.all),
+    ],
     'combined': [
       const DeckFilter.wordTypes({WordType.noun}),
       const DeckFilter.addedInLastDays(30),
@@ -39,7 +42,7 @@ void main() {
     test('every order is equally likely with $name', () async {
       final pack = await repos.createPack();
       for (final term in ['Haus', 'Baum', 'Tisch']) {
-        await repos.addNoun(pack, term);
+        await repos.addNoun(pack, term, tags: ['A1', 'food']);
       }
       if (deckFilters.isEmpty) {
         await repos.entries.add(

@@ -16,6 +16,7 @@ import '../../utils/clock.dart';
 import '../../utils/result.dart';
 import '../local/app_database.dart';
 import '../local/mappers.dart';
+import '../local/search_columns.dart';
 
 /// Entries of a language pack. Deleted entries are soft-deleted and hidden.
 abstract interface class EntryRepository {
@@ -84,8 +85,6 @@ class LocalEntryRepository implements EntryRepository {
   final AppDatabase _db;
   final Clock _clock;
   final IdGenerator _newId;
-
-  static const _likeEscape = r'\';
 
   Expression<bool> _activeIn(String packId) =>
       _db.entries.packId.equals(packId) & _db.entries.deletedAt.isNull();
@@ -322,15 +321,15 @@ class LocalEntryRepository implements EntryRepository {
     String packId,
     String normalized,
   ) async {
-    final pattern = '%${_escapeLike(normalized)}%';
+    final pattern = '%${escapeLike(normalized)}%';
     final rows =
         await (_db.select(_db.entries)..where(
               (e) =>
                   _activeIn(packId) &
-                  (e.searchTerm.like(pattern, escapeChar: _likeEscape) |
+                  (e.searchTerm.like(pattern, escapeChar: likeEscapeChar) |
                       e.searchTranslations.like(
                         pattern,
-                        escapeChar: _likeEscape,
+                        escapeChar: likeEscapeChar,
                       )),
             ))
             .get();
@@ -401,8 +400,3 @@ class LocalEntryRepository implements EntryRepository {
 
 List<String> _splitTranslations(String joined) =>
     joined.isEmpty ? const [] : joined.split(translationSeparator);
-
-String _escapeLike(String text) => text.replaceAllMapped(
-  RegExp(r'[\\%_]'),
-  (m) => '${LocalEntryRepository._likeEscape}${m[0]}',
-);

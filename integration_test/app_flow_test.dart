@@ -436,4 +436,69 @@ void main() {
     await tester.pumpWidget(const SizedBox());
     await database.close();
   });
+
+  testWidgets('build a deck of entries with all of the chosen tags', (
+    tester,
+  ) async {
+    auth.emitSignedIn();
+    await tester.pumpWidget(
+      AppScope(
+        dependencies: AppDependencies(
+          database: database,
+          authService: auth,
+          syncApi: server,
+        ),
+      ),
+    );
+    await wait(tester);
+
+    Future<void> addTaggedNoun(String term, String tags) async {
+      await tapText(tester, 'New entry');
+      await enter(tester, 'Term', term);
+      await tapText(tester, 'Article');
+      await tapText(tester, 'das');
+      final tagsField = find.widgetWithText(TextField, 'Tags');
+      await tester.ensureVisible(tagsField);
+      await tester.enterText(tagsField, tags);
+      await tester.tap(find.widgetWithText(FilledButton, 'Save'));
+      await wait(tester);
+    }
+
+    Future<void> tapChip(String label) async {
+      final chip = find.widgetWithText(FilterChip, label);
+      await tester.ensureVisible(chip);
+      await tester.tap(chip);
+      await wait(tester, 5);
+    }
+
+    await tapText(tester, 'New pack');
+    await tester.enterText(find.byType(TextField), 'Alltag');
+    await tapText(tester, 'Create');
+    await tapText(tester, 'Alltag');
+    await addTaggedNoun('Haus', 'A1, home');
+    await addTaggedNoun('Auto', 'a1');
+
+    // A deck of entries tagged both A1 and home.
+    await tapText(tester, 'Recap');
+    await tapText(tester, 'New deck');
+    await tester.enterText(find.widgetWithText(TextField, 'Name'), 'Zuhause');
+    await tapChip('A1');
+    expect(find.text('2 entries match'), findsOneWidget);
+    await tapChip('home');
+    expect(find.text('2 entries match'), findsOneWidget);
+    final allTags = find.text('All tags');
+    await tester.ensureVisible(allTags);
+    await tapText(tester, 'All tags');
+    expect(find.text('1 entry matches'), findsOneWidget);
+    await tester.tap(find.widgetWithText(FilledButton, 'Save'));
+    await wait(tester);
+
+    // The deck page lists only the entry with both tags.
+    expect(find.text('Zuhause'), findsWidgets);
+    expect(find.text('das Haus'), findsOneWidget);
+    expect(find.text('das Auto'), findsNothing);
+
+    await tester.pumpWidget(const SizedBox());
+    await database.close();
+  });
 }

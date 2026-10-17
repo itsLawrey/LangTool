@@ -56,7 +56,7 @@ extension EntryRowMapping on EntryRow {
 }
 
 extension EntryMapping on Entry {
-  /// Includes the derived search and duplicate-detection columns.
+  /// Includes the derived search, duplicate-detection and tag columns.
   /// [needsPush] is false only for rows applied from the server.
   EntriesCompanion toCompanion({bool needsPush = true}) =>
       EntriesCompanion.insert(
@@ -77,6 +77,7 @@ extension EntryMapping on Entry {
         searchTerm: searchTermColumn(term),
         searchTranslations: searchTranslationsColumn(translations),
         duplicateKey: duplicateKey(term),
+        tagKeys: Value(tagKeysColumn(tags)),
         needsPush: Value(needsPush),
       );
 }

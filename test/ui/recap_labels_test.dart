@@ -52,9 +52,34 @@ void main() {
       expect(deckFilterLabel(const DeckFilter.wordTypes({})), 'No word types');
     });
 
+    test('lists tags joined by the match mode, ignoring case', () {
+      expect(
+        deckFilterLabel(const DeckFilter.tags({'food', 'A1'}, TagMatch.any)),
+        'Tags: A1 or food',
+      );
+      expect(
+        deckFilterLabel(const DeckFilter.tags({'food', 'A1'}, TagMatch.all)),
+        'Tags: A1 and food',
+      );
+      expect(
+        deckFilterLabel(
+          const DeckFilter.tags({'food', 'b2', 'A1'}, TagMatch.any),
+        ),
+        'Tags: A1, b2 or food',
+      );
+      expect(
+        deckFilterLabel(const DeckFilter.tags({'A1'}, TagMatch.all)),
+        'Tag: A1',
+      );
+      expect(
+        deckFilterLabel(const DeckFilter.tags({}, TagMatch.any)),
+        'No tags',
+      );
+    });
+
     test('names filters from a newer app version', () {
       expect(
-        deckFilterLabel(const DeckFilter.unknown({'type': 'tags'})),
+        deckFilterLabel(const DeckFilter.unknown({'type': 'tagged'})),
         'Filter from a newer app version',
       );
     });
@@ -66,8 +91,9 @@ void main() {
       deckFiltersSummary(const [
         DeckFilter.addedInLastDays(30),
         DeckFilter.wordTypes({WordType.adjective}),
+        DeckFilter.tags({'A1'}, TagMatch.any),
       ]),
-      'Added in the last 30 days · Adjective',
+      'Added in the last 30 days · Adjective · Tag: A1',
     );
   });
 

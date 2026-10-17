@@ -26,8 +26,23 @@ String deckFilterLabel(DeckFilter filter) => switch (filter) {
     for (final type in WordType.values)
       if (types.contains(type)) wordTypeLabel(type),
   ].join(', '),
+  TagsFilter(:final tags) when tags.isEmpty => 'No tags',
+  TagsFilter(:final tags) when tags.length == 1 => 'Tag: ${tags.single}',
+  TagsFilter(:final tags, :final match) => 'Tags: ${_joinTags(tags, match)}',
   UnknownFilter() => 'Filter from a newer app version',
 };
+
+/// E.g. `A1, B2 or food`, sorted ignoring case.
+String _joinTags(Set<String> tags, TagMatch match) {
+  final sorted = [...tags]
+    ..sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
+  final last = sorted.removeLast();
+  final word = switch (match) {
+    TagMatch.any => 'or',
+    TagMatch.all => 'and',
+  };
+  return '${sorted.join(', ')} $word $last';
+}
 
 /// E.g. `1 entry`, `12 entries`.
 String entryCountLabel(int count) => count == 1 ? '1 entry' : '$count entries';

@@ -1,7 +1,9 @@
 import 'package:drift/drift.dart';
 
 import '../../domain/recap/deck_filter.dart';
+import '../../domain/search/text_normalizer.dart';
 import 'app_database.dart';
+import 'search_columns.dart';
 
 /// The SQL condition on [entries] that selects the rows matching every one of
 /// [filters] (all rows if there are none). [now] is the current time, for
@@ -36,8 +38,23 @@ Expression<bool> _condition(
           ),
   WordTypesFilter(:final types) =>
     types.isEmpty ? const Constant(false) : entries.wordType.isInValues(types),
+  TagsFilter(:final tags) when tags.isEmpty => const Constant(false),
+  TagsFilter(:final tags, match: TagMatch.any) => Expression.or([
+    for (final tag in tags) _hasTag(entries, tag),
+  ]),
+  TagsFilter(:final tags, match: TagMatch.all) => Expression.and([
+    for (final tag in tags) _hasTag(entries, tag),
+  ]),
   UnknownFilter() => const Constant(false),
 };
+
+/// Whether the entry has [tag], ignoring case and spacing (see
+/// [tagKeysColumn]).
+Expression<bool> _hasTag($EntriesTable entries, String tag) =>
+    entries.tagKeys.like(
+      '%$tagKeySeparator${escapeLike(duplicateKey(tag))}$tagKeySeparator%',
+      escapeChar: likeEscapeChar,
+    );
 
 /// Local midnight at the start of [day] + [plusDays], as a UTC instant.
 DateTime _startOfDay(DateTime day, {int plusDays = 0}) =>
