@@ -1,5 +1,6 @@
 import 'package:drift/drift.dart';
 
+import '../../domain/models/deck.dart';
 import '../../domain/models/entry.dart';
 import '../../domain/models/language_pack.dart';
 import '../../domain/search/text_normalizer.dart';
@@ -81,4 +82,32 @@ extension EntryMapping on Entry {
         duplicateKey: duplicateKey(term),
         needsPush: Value(needsPush),
       );
+}
+
+extension DeckRowMapping on DeckRow {
+  Deck toDomain() => Deck(
+    id: id,
+    ownerId: ownerId,
+    packId: packId,
+    name: name,
+    filters: filters,
+    createdAt: createdAt,
+    updatedAt: updatedAt,
+    deletedAt: deletedAt,
+  );
+}
+
+extension DeckMapping on Deck {
+  /// [needsPush] is false only for rows applied from the server.
+  DecksCompanion toCompanion({bool needsPush = true}) => DecksCompanion.insert(
+    id: id,
+    ownerId: ownerId,
+    packId: packId,
+    name: name,
+    filters: filters,
+    createdAt: createdAt,
+    updatedAt: updatedAt,
+    deletedAt: Value(deletedAt),
+    needsPush: Value(needsPush),
+  );
 }

@@ -48,6 +48,13 @@ class SyncEngine {
       apply: _store.applyRemoteEntries,
       idOf: (entry) => entry.id,
     );
+    final decksPulledUntil = await _pull(
+      since: state?.decksPulledUntil,
+      fetch: (from) =>
+          _api.fetchDecks(ownerId: ownerId, from: from, limit: pageSize),
+      apply: _store.applyRemoteDecks,
+      idOf: (deck) => deck.id,
+    );
 
     // Conflict resolution during the download may have soft-deleted entries.
     await _push(ownerId);
@@ -58,13 +65,14 @@ class SyncEngine {
         ownerId: Value(ownerId),
         packsPulledUntil: Value(packsPulledUntil),
         entriesPulledUntil: Value(entriesPulledUntil),
+        decksPulledUntil: Value(decksPulledUntil),
         lastSyncedAt: Value(finishedAt),
       ),
     );
     return finishedAt;
   }
 
-  /// Uploads packs before entries, so every entry's pack exists remotely.
+  /// Uploads packs before entries and decks, so their packs exist remotely.
   Future<void> _push(String ownerId) async {
     while (true) {
       final packs = await _store.dirtyPacks(ownerId, limit: pageSize);
@@ -79,6 +87,13 @@ class SyncEngine {
       await _api.upsertEntries(entries);
       await _store.markEntriesPushed(entries);
       if (entries.length < pageSize) break;
+    }
+    while (true) {
+      final decks = await _store.dirtyDecks(ownerId, limit: pageSize);
+      if (decks.isEmpty) break;
+      await _api.upsertDecks(decks);
+      await _store.markDecksPushed(decks);
+      if (decks.length < pageSize) break;
     }
   }
 

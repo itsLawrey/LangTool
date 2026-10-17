@@ -1,11 +1,12 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../../domain/models/deck.dart';
 import '../../domain/models/entry.dart';
 import '../../domain/models/language_pack.dart';
 import 'remote_sync_api.dart';
 
-/// [RemoteSyncApi] over the `language_packs` and `entries` tables (see
-/// `supabase/migrations/`). Row-level security limits every query to the
+/// [RemoteSyncApi] over the `language_packs`, `entries` and `decks` tables
+/// (see `supabase/migrations/`). Row-level security limits every query to the
 /// signed-in user's rows.
 class SupabaseSyncApi implements RemoteSyncApi {
   SupabaseSyncApi(this._client);
@@ -14,6 +15,7 @@ class SupabaseSyncApi implements RemoteSyncApi {
 
   static const _packs = 'language_packs';
   static const _entries = 'entries';
+  static const _decks = 'decks';
   static const _serverUpdatedAt = 'server_updated_at';
 
   @override
@@ -23,6 +25,10 @@ class SupabaseSyncApi implements RemoteSyncApi {
   @override
   Future<void> upsertEntries(List<Entry> entries) =>
       _upsert(_entries, [for (final entry in entries) entry.toJson()]);
+
+  @override
+  Future<void> upsertDecks(List<Deck> decks) =>
+      _upsert(_decks, [for (final deck in decks) deck.toJson()]);
 
   @override
   Future<List<RemoteRecord<LanguagePack>>> fetchPacks({
@@ -37,6 +43,13 @@ class SupabaseSyncApi implements RemoteSyncApi {
     required ChangeCursor? from,
     required int limit,
   }) => _fetch(_entries, ownerId, from, limit, Entry.fromJson);
+
+  @override
+  Future<List<RemoteRecord<Deck>>> fetchDecks({
+    required String ownerId,
+    required ChangeCursor? from,
+    required int limit,
+  }) => _fetch(_decks, ownerId, from, limit, Deck.fromJson);
 
   Future<void> _upsert(String table, List<Map<String, Object?>> rows) async {
     if (rows.isEmpty) return;

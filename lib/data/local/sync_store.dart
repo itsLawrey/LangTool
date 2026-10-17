@@ -1,5 +1,6 @@
 import 'package:drift/drift.dart';
 
+import '../../domain/models/deck.dart';
 import '../../domain/models/entry.dart';
 import '../../domain/models/language_pack.dart';
 import '../../domain/search/text_normalizer.dart';
@@ -33,27 +34,57 @@ class LocalSyncStore {
           .map((row) => row.toDomain())
           .get();
 
+  /// Like [dirtyPacks], for decks.
+  Future<List<Deck>> dirtyDecks(String ownerId, {required int limit}) =>
+      (_db.select(_db.decks)
+            ..where((d) => d.ownerId.equals(ownerId) & d.needsPush)
+            ..orderBy([(d) => OrderingTerm.asc(d.id)])
+            ..limit(limit))
+          .map((row) => row.toDomain())
+          .get();
+
   /// Whether [ownerId] has any local changes not yet uploaded.
   Future<bool> hasDirty(String ownerId) async {
-    final pack =
-        await (_db.selectOnly(_db.languagePacks)
-              ..addColumns([_db.languagePacks.id])
-              ..where(
-                _db.languagePacks.ownerId.equals(ownerId) &
-                    _db.languagePacks.needsPush,
-              )
+    final packs = _db.languagePacks;
+    final entries = _db.entries;
+    final decks = _db.decks;
+    return await _anyDirty(
+          packs,
+          packs.id,
+          packs.ownerId,
+          packs.needsPush,
+          ownerId,
+        ) ||
+        await _anyDirty(
+          entries,
+          entries.id,
+          entries.ownerId,
+          entries.needsPush,
+          ownerId,
+        ) ||
+        await _anyDirty(
+          decks,
+          decks.id,
+          decks.ownerId,
+          decks.needsPush,
+          ownerId,
+        );
+  }
+
+  Future<bool> _anyDirty(
+    TableInfo<Table, Object?> table,
+    Expression<String> id,
+    Expression<String> owner,
+    Expression<bool> needsPush,
+    String ownerId,
+  ) async {
+    final row =
+        await (_db.selectOnly(table)
+              ..addColumns([id])
+              ..where(owner.equals(ownerId) & needsPush)
               ..limit(1))
             .getSingleOrNull();
-    if (pack != null) return true;
-    final entry =
-        await (_db.selectOnly(_db.entries)
-              ..addColumns([_db.entries.id])
-              ..where(
-                _db.entries.ownerId.equals(ownerId) & _db.entries.needsPush,
-              )
-              ..limit(1))
-            .getSingleOrNull();
-    return entry != null;
+    return row != null;
   }
 
   /// Marks [packs] as uploaded, unless they changed again since they were
@@ -76,6 +107,17 @@ class LocalSyncStore {
         const EntriesCompanion(needsPush: Value(false)),
         where: (e) =>
             e.id.equals(entry.id) & e.updatedAt.equals(entry.updatedAt),
+      );
+    }
+  });
+
+  /// Like [markPacksPushed], for decks.
+  Future<void> markDecksPushed(List<Deck> decks) => _db.batch((batch) {
+    for (final deck in decks) {
+      batch.update(
+        _db.decks,
+        const DecksCompanion(needsPush: Value(false)),
+        where: (d) => d.id.equals(deck.id) & d.updatedAt.equals(deck.updatedAt),
       );
     }
   });
@@ -122,6 +164,29 @@ class LocalSyncStore {
         }
         return entries.length;
       });
+
+  /// Applies downloaded decks in order, skipping those older than the local
+  /// copy. Like [applyRemoteEntries], stops early at a deck whose pack is not
+  /// known locally yet and returns how many were processed.
+  Future<int> applyRemoteDecks(List<Deck> decks) => _db.transaction(() async {
+    for (final (index, remote) in decks.indexed) {
+      final pack = await (_db.select(
+        _db.languagePacks,
+      )..where((p) => p.id.equals(remote.packId))).getSingleOrNull();
+      if (pack == null) return index;
+
+      final local = await (_db.select(
+        _db.decks,
+      )..where((d) => d.id.equals(remote.id))).getSingleOrNull();
+      if (local != null && remote.updatedAt.isBefore(local.updatedAt)) {
+        continue;
+      }
+      await _db
+          .into(_db.decks)
+          .insertOnConflictUpdate(remote.toCompanion(needsPush: false));
+    }
+    return decks.length;
+  });
 
   Future<void> _applyEntry(Entry remote) async {
     final rival = remote.deletedAt != null

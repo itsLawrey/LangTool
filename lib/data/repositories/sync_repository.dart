@@ -32,6 +32,7 @@ class SyncRepository extends ChangeNotifier {
           TableUpdateQuery.onAllTables([
             database.languagePacks,
             database.entries,
+            database.decks,
           ]),
         )
         .listen((_) => _onLocalChange());

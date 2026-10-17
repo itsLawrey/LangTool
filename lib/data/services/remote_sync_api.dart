@@ -1,3 +1,4 @@
+import '../../domain/models/deck.dart';
 import '../../domain/models/entry.dart';
 import '../../domain/models/language_pack.dart';
 
@@ -20,7 +21,7 @@ final class ChangeCursor {
   final String? afterId;
 }
 
-/// The cloud copy of a user's packs and entries.
+/// The cloud copy of a user's packs, entries and decks.
 ///
 /// Writes are upserts. The server keeps whichever version has the later
 /// `updatedAt` and stamps every accepted write with its own time.
@@ -28,6 +29,8 @@ abstract interface class RemoteSyncApi {
   Future<void> upsertPacks(List<LanguagePack> packs);
 
   Future<void> upsertEntries(List<Entry> entries);
+
+  Future<void> upsertDecks(List<Deck> decks);
 
   /// [ownerId]'s packs changed from [from] on (all if `null`), oldest first,
   /// at most [limit].
@@ -39,6 +42,13 @@ abstract interface class RemoteSyncApi {
 
   /// Like [fetchPacks], for entries.
   Future<List<RemoteRecord<Entry>>> fetchEntries({
+    required String ownerId,
+    required ChangeCursor? from,
+    required int limit,
+  });
+
+  /// Like [fetchPacks], for decks.
+  Future<List<RemoteRecord<Deck>>> fetchDecks({
     required String ownerId,
     required ChangeCursor? from,
     required int limit,

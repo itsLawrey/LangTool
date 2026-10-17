@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:langtool/data/services/remote_sync_api.dart';
+import 'package:langtool/domain/models/deck.dart';
 import 'package:langtool/domain/models/entry.dart';
 import 'package:langtool/domain/models/language_pack.dart';
 
@@ -11,10 +12,11 @@ import 'package:langtool/domain/models/language_pack.dart';
 class FakeRemoteSyncApi implements RemoteSyncApi {
   final packs = <String, RemoteRecord<LanguagePack>>{};
   final entries = <String, RemoteRecord<Entry>>{};
+  final decks = <String, RemoteRecord<Deck>>{};
 
   /// When set, calls throw it: every call, or only the operations named in
-  /// [failingOperations] (`upsertPacks`, `upsertEntries`, `fetchPacks`,
-  /// `fetchEntries`) if that is not empty.
+  /// [failingOperations] (`upsertPacks`, `upsertEntries`, `upsertDecks`,
+  /// `fetchPacks`, `fetchEntries`, `fetchDecks`) if that is not empty.
   Exception? failure;
   final failingOperations = <String>{};
 
@@ -39,6 +41,9 @@ class FakeRemoteSyncApi implements RemoteSyncApi {
 
   void putPack(LanguagePack pack, DateTime serverTime) =>
       packs[pack.id] = RemoteRecord(pack, serverTime);
+
+  void putDeck(Deck deck, DateTime serverTime) =>
+      decks[deck.id] = RemoteRecord(deck, serverTime);
 
   @override
   Future<void> upsertPacks(List<LanguagePack> packs) async {
@@ -84,6 +89,29 @@ class FakeRemoteSyncApi implements RemoteSyncApi {
   }
 
   @override
+  Future<void> upsertDecks(List<Deck> decks) async {
+    _maybeFail('upsertDecks');
+    for (final deck in decks) {
+      if (!packs.containsKey(deck.packId)) {
+        throw StateError('Foreign key violation: pack ${deck.packId}');
+      }
+      final existing = this.decks[deck.id]?.value;
+      if (existing != null && deck.updatedAt.isBefore(existing.updatedAt)) {
+        continue;
+      }
+      this.decks[deck.id] = RemoteRecord(
+        existing == null
+            ? deck
+            : deck.copyWith(
+                ownerId: existing.ownerId,
+                createdAt: existing.createdAt,
+              ),
+        _serverNow(),
+      );
+    }
+  }
+
+  @override
   Future<List<RemoteRecord<LanguagePack>>> fetchPacks({
     required String ownerId,
     required ChangeCursor? from,
@@ -112,6 +140,22 @@ class FakeRemoteSyncApi implements RemoteSyncApi {
       entries.values,
       (e) => e.ownerId == ownerId,
       (e) => e.id,
+      from,
+      limit,
+    );
+  }
+
+  @override
+  Future<List<RemoteRecord<Deck>>> fetchDecks({
+    required String ownerId,
+    required ChangeCursor? from,
+    required int limit,
+  }) async {
+    _maybeFail('fetchDecks');
+    return _page(
+      decks.values,
+      (d) => d.ownerId == ownerId,
+      (d) => d.id,
       from,
       limit,
     );
