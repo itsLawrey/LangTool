@@ -13,6 +13,9 @@ import '../ui/features/recap/deck_editor/view_models/deck_editor_view_model.dart
 import '../ui/features/recap/deck_editor/views/deck_editor_screen.dart';
 import '../ui/features/recap/decks/view_models/decks_view_model.dart';
 import '../ui/features/recap/decks/views/decks_screen.dart';
+import '../ui/features/recap_session/view_models/recap_direction_param.dart';
+import '../ui/features/recap_session/view_models/recap_session_view_model.dart';
+import '../ui/features/recap_session/views/recap_session_screen.dart';
 import '../ui/features/timeline/view_models/timeline_view_model.dart';
 import '../ui/features/timeline/views/timeline_screen.dart';
 import 'routes.dart';
@@ -129,9 +132,17 @@ RouteBase packShellRoute(GlobalKey<NavigatorState> rootNavigatorKey) {
                   // Query parameter `direction`: a `RecapDirection` name.
                   fullScreen(
                     'session',
-                    // TODO(orchestrator): RecapSessionScreen
-                    (context, state) => const Scaffold(
-                      body: Center(child: Text('Recap session')),
+                    (context, state) => ChangeNotifierProvider(
+                      create: (context) => RecapSessionViewModel(
+                        deckRepository: context.read(),
+                        packRepository: context.read(),
+                        packId: state.pathParameters['packId']!,
+                        deckId: state.pathParameters['deckId']!,
+                        direction: recapDirectionFromParam(
+                          state.uri.queryParameters['direction'],
+                        ),
+                      ),
+                      child: const RecapSessionScreen(),
                     ),
                   ),
                 ],

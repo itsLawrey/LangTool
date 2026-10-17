@@ -18,7 +18,7 @@ flutter test                          # all tests
 flutter test test/widget_test.dart    # single file
 flutter test --name "<test name>"     # single test by name
 flutter test --coverage               # writes coverage/lcov.info
-flutter test integration_test -d linux   # end-to-end flows (opens a window)
+flutter test integration_test -d linux   # end-to-end flows (opens a window); keep them all in integration_test/app_flow_test.dart, since Linux can't launch a second file per run
 dart format .
 dart run build_runner build --delete-conflicting-outputs   # regenerate *.freezed.dart / *.g.dart
 ```
@@ -31,6 +31,15 @@ Layered per Flutter's official architecture guide (MVVM with `provider` and `go_
 
 - `lib/main.dart`: initializes Supabase from `AppConfig` (dart-defines), opens the DB and provides the repositories via `MultiProvider`.
 - `lib/routing/router.dart`: redirects to `/login` when signed out. Each `GoRoute` creates its ViewModel in a `ChangeNotifierProvider`, so it's disposed with the route. Screens read it with `context.watch`.
+- `lib/routing/pack_routes.dart`: an opened pack is a `StatefulShellRoute.indexedStack` (`PackShell`) with a bottom `NavigationBar`. Its two tabs are **Note** (the timeline, `/packs/:packId`) and **Recap** (decks, `/packs/:packId/recap`).
+  - Every screen below a tab uses `parentNavigatorKey: rootNavigatorKey`, so it opens full screen without the bar.
+  - go_router doesn't allow a path parameter in a branch's default location, so `PackShell` switches tabs with `context.go`, not `goBranch`.
+- **Recap UI** (`lib/ui/features/recap/{decks,deck_detail,deck_editor}`, `lib/ui/features/recap_session`):
+  - The deck list shows each deck's live entry count.
+  - The deck page offers Start, which asks for the card side and then pushes `Routes.recapSession(..., direction)`.
+  - The session screen and summary save nothing.
+  - **Deck editor:** each filter is a `FilterEditor` (`deck_editor/view_models/filters/`) plus a section widget (`deck_editor/views/filters/`). Add a filter by writing both and registering them in `DeckEditorViewModel` and `DeckEditorForm`. Filters the editor can't edit (`unknown`, filters that match nothing) are kept unchanged.
+  - Labels and summaries are in `ui/core/recap_labels.dart`.
 - `lib/ui/features/<feature>/{view_models,views}/`: auth, packs, timeline, entry_detail and entry_form.
   - `ui/core/` holds shared labels, display helpers, dialogs and the theme.
   - Keep files small and split widgets into their own files.

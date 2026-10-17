@@ -9,7 +9,9 @@ import '../test/helpers/fake_auth_service.dart';
 import '../test/helpers/fake_remote_sync_api.dart';
 
 /// End-to-end flows through the real app on a device (run with
-/// `flutter test integration_test -d linux`). Sign-in and the cloud are
+/// `flutter test integration_test -d linux`). Keep all flows in this one
+/// file: on Linux desktop the runner cannot launch a second integration test
+/// file in the same run. Sign-in and the cloud are
 /// faked; everything else (UI, routing, view models, database, sync engine)
 /// is the production code.
 void main() {
@@ -179,6 +181,68 @@ void main() {
 
     await tapText(tester, 'Reise');
     expect(find.text('das Ticket'), findsOneWidget);
+
+    await tester.pumpWidget(const SizedBox());
+    await database.close();
+  });
+
+  testWidgets('build a word type deck, practise it, see the summary', (
+    tester,
+  ) async {
+    auth.emitSignedIn();
+    await tester.pumpWidget(
+      AppScope(
+        dependencies: AppDependencies(
+          database: database,
+          authService: auth,
+          syncApi: server,
+        ),
+      ),
+    );
+    await wait(tester);
+
+    // A pack with two nouns.
+    await tapText(tester, 'New pack');
+    await tester.enterText(find.byType(TextField), 'Alltag');
+    await tapText(tester, 'Create');
+    await tapText(tester, 'Alltag');
+    await addNoun(tester, 'Haus', 'house');
+    await addNoun(tester, 'Auto', 'car');
+
+    // The Recap tab starts empty.
+    await tapText(tester, 'Recap');
+    expect(find.text('No decks yet.'), findsOneWidget);
+
+    // Create a deck of nouns; the count follows the filters live.
+    await tapText(tester, 'New deck');
+    await tester.enterText(find.widgetWithText(TextField, 'Name'), 'Nomen');
+    await tester.tap(find.widgetWithText(FilterChip, 'Verb'));
+    await wait(tester, 5);
+    expect(find.text('0 entries match'), findsOneWidget);
+    await tester.tap(find.widgetWithText(FilterChip, 'Noun'));
+    await wait(tester, 5);
+    expect(find.text('2 entries match'), findsOneWidget);
+    await tester.tap(find.widgetWithText(FilledButton, 'Save'));
+    await wait(tester);
+
+    // The deck page starts a session after choosing the card side.
+    expect(find.text('Nomen'), findsWidgets);
+    await tapText(tester, 'Start');
+    expect(find.text('Card side'), findsOneWidget);
+    await tapText(tester, 'German first');
+
+    expect(find.text('1 / 2'), findsOneWidget);
+    await tapText(tester, 'Reveal');
+    await tapText(tester, 'Knew it');
+    expect(find.text('2 / 2'), findsOneWidget);
+    await tapText(tester, 'Reveal');
+    await tapText(tester, "Didn't know");
+
+    expect(find.text('Session complete'), findsOneWidget);
+    expect(find.text('Knew 1 of 2'), findsOneWidget);
+    expect(find.text("Didn't know 1"), findsOneWidget);
+    await tapText(tester, 'Done');
+    expect(find.text('Start'), findsOneWidget);
 
     await tester.pumpWidget(const SizedBox());
     await database.close();
