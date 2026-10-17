@@ -8,6 +8,8 @@ LangTool: a Flutter app with a Supabase backend for building vocabulary dictiona
 
 Development proceeds in stages defined by the user. Implement only the current stage's spec. Don't add features, UI copy or flavour text that wasn't specified.
 
+All changes go through a branch and a pull request. `main` is protected: a PR is required, and the `test` and `build_and_preview` checks must pass. Merging to `main` deploys the live web app.
+
 ## Commands
 
 ```sh
@@ -158,6 +160,18 @@ Offline-first, automatic two-way sync, last write wins per row.
 
   It exposes `phase` (idle, syncing, offline, failed), `lastSyncedAt` and `error`. Network errors (`http.ClientException`, timeouts) count as offline.
 - Web: SQLite runs from `web/sqlite3.wasm` + `web/drift_worker.js`, taken from the drift GitHub release matching `pubspec.lock`'s drift version (currently `drift-2.35.2`). Replace both whenever drift is upgraded: `gh release download drift-<version> -R simolus3/drift -p drift_worker.js -p sqlite3.wasm -D web --clobber`. For the fastest browser storage (OPFS), serve with `Cross-Origin-Opener-Policy: same-origin` and `Cross-Origin-Embedder-Policy: require-corp`. In dev: `flutter run -d chrome --web-header=Cross-Origin-Opener-Policy=same-origin --web-header=Cross-Origin-Embedder-Policy=require-corp`. Without them it falls back to slower storage. Production hosting must serve `.wasm` as `application/wasm`.
+
+## Deployment (web)
+
+- **Firebase Hosting:** site `itslawrey-langtool` in project `itslawrey-flutter-demos` (shared with the owner's other portfolio demos), hosting target `langtool`. Live at https://itslawrey-langtool.web.app.
+- **`.github/workflows/`:**
+  - `firebase-hosting-pull-request.yml`: `test` (analyze + `flutter test`), then `build_and_preview`. It deploys a preview channel and comments the URL on the PR. Fork and Dependabot PRs skip the deploy, because they can't read secrets.
+  - `firebase-hosting-merge.yml`: the same steps on push to `main`, deploying `channelId: live`.
+  - Flutter is pinned (`flutter-version`). Bump it together with the local SDK.
+- **Build-time config** comes from repository secrets `SUPABASE_URL` and `SUPABASE_PUBLISHABLE_KEY`, passed as `--dart-define`s. `AppConfig` reads them. The deploy secret is `FIREBASE_SERVICE_ACCOUNT_ITSLAWREY_FLUTTER_DEMOS`.
+- **`firebase.json`** sets COOP `same-origin` + COEP `credentialless` on every path (so drift gets OPFS), and `Cache-Control: no-cache` (Flutter output isn't content-hashed). It also has an SPA rewrite to `index.html`.
+- **Supabase Auth** must allow the live site and PR previews as redirect URLs: `https://itslawrey-langtool.web.app/**` and `https://itslawrey-langtool--*.web.app/**`.
+- **Portfolio:** itsLawrey/itsLawrey.github.io (static, GitHub Pages) has the LangTool card and `langtool/` (home page and privacy policy). Those are the Google OAuth branding URLs, so keep them online.
 
 ## Supabase
 
