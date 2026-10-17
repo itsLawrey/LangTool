@@ -68,7 +68,7 @@ Layered per Flutter's official architecture guide (MVVM with `provider` and `go_
 - `lib/domain/search/`: pure Dart search logic with no DB.
   - `text_normalizer.dart` defines two keys:
     - `duplicateKey`: case and whitespace folded, umlauts kept, so "schon" ≠ "schön";
-    - `normalizeForSearch`: also folds German and Hungarian diacritics.
+    - `normalizeForSearch`: also folds German and Hungarian diacritics and drops separators (`|`, `¦`, `·`, hyphens and dashes), so `hinseh` finds `hin|sehen`. Changing it changes the stored `search_*` columns, so it needs a schema bump whose step recomputes them (see `from3To4`).
   - `fuzzy.dart`: edit distance (optimal string alignment) with a length-scaled typo tolerance.
   - `entry_ranker.dart`: classifies matches (exact > prefix > contains > fuzzy, term before translation) and orders results.
   - `similar_entries.dart`: the "did you mean an existing entry?" check before adding.

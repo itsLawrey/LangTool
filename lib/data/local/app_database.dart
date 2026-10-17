@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:drift/drift.dart';
 
 import '../../domain/models/deck.dart';
@@ -6,6 +8,7 @@ import '../../domain/models/word_type.dart';
 import '../../domain/recap/deck_filter.dart';
 import 'app_database.steps.dart';
 import 'converters.dart';
+import 'search_columns.dart';
 
 part 'app_database.g.dart';
 
@@ -120,7 +123,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase(super.executor);
 
   @override
-  int get schemaVersion => 3;
+  int get schemaVersion => 4;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -142,6 +145,28 @@ class AppDatabase extends _$AppDatabase {
           schema.syncStates,
           schema.syncStates.decksPulledUntil,
         );
+      },
+      // Search ignores separators such as `|` since v4: recompute the
+      // derived search columns. They exist only locally, so nothing is
+      // marked for upload.
+      from3To4: (m, schema) async {
+        final rows = await customSelect(
+          'SELECT id, term, translations FROM entries',
+        ).get();
+        for (final row in rows) {
+          final translations = (jsonDecode(
+            row.read<String>('translations'),
+          ) as List<Object?>).cast<String>();
+          await customStatement(
+            'UPDATE entries SET search_term = ?, search_translations = ? '
+            'WHERE id = ?',
+            [
+              searchTermColumn(row.read<String>('term')),
+              searchTranslationsColumn(translations),
+              row.read<String>('id'),
+            ],
+          );
+        }
       },
     ),
     beforeOpen: (details) async {

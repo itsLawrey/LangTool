@@ -291,6 +291,23 @@ void main() {
       expect(await search('maus'), ['Maus']);
     });
 
+    test('ignores separators in terms, translations and the query', () async {
+      await add(
+        EntryDraft(
+          packId: pack.id,
+          wordType: WordType.verb,
+          term: 'hin|sehen',
+          translations: ['to look-at'],
+        ),
+      );
+
+      expect(await search('hinseh'), ['hin|sehen']);
+      expect(await search('hin-sehen'), ['hin|sehen']);
+      expect(await search('hin|s'), ['hin|sehen']);
+      expect(await search('lookat'), ['hin|sehen']);
+      expect(await search('|'), isEmpty);
+    });
+
     test('treats LIKE wildcards literally', () async {
       expect(await search('%'), isEmpty);
 

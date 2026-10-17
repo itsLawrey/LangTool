@@ -10,6 +10,7 @@ import 'generated/schema.dart';
 import 'generated/schema_v1.dart' as v1;
 import 'generated/schema_v2.dart' as v2;
 import 'generated/schema_v3.dart' as v3;
+import 'generated/schema_v4.dart' as v4;
 
 void main() {
   driftRuntimeOptions.dontWarnAboutMultipleDatabases = true;
@@ -167,6 +168,58 @@ void main() {
               ),
             );
         expect(await newDb.select(newDb.decks).get(), hasLength(1));
+      },
+    );
+  });
+
+  test('migration from v3 to v4 recomputes the search columns', () async {
+    const pack = v3.LanguagePacksData(
+      id: 'pack-1',
+      ownerId: 'user-1',
+      name: 'Deutsch',
+      languageCode: 'de',
+      createdAt: '2026-10-15T12:00:00.000Z',
+      updatedAt: '2026-10-15T12:00:00.000Z',
+      needsPush: 0,
+    );
+    // Search columns as v3 wrote them, with the separators kept.
+    const entry = v3.EntriesData(
+      id: 'entry-1',
+      ownerId: 'user-1',
+      packId: 'pack-1',
+      wordType: 'verb',
+      term: 'sich gut an|hören',
+      forms: '{}',
+      translations: '["to sound good","well-known"]',
+      examples: '[]',
+      tags: '[]',
+      schemaVersion: 1,
+      createdAt: '2026-10-15T12:00:00.000Z',
+      updatedAt: '2026-10-15T12:00:00.000Z',
+      searchTerm: 'sich gut an|horen',
+      searchTranslations: 'to sound good\nwell-known',
+      duplicateKey: 'sich gut an|hören',
+      needsPush: 0,
+    );
+
+    await verifier.testWithDataIntegrity(
+      oldVersion: 3,
+      newVersion: 4,
+      createOld: v3.DatabaseAtV3.new,
+      createNew: v4.DatabaseAtV4.new,
+      openTestedDatabase: AppDatabase.new,
+      createItems: (batch, oldDb) {
+        batch.insert(oldDb.languagePacks, pack);
+        batch.insert(oldDb.entries, entry);
+      },
+      validateItems: (newDb) async {
+        final [newEntry] = await newDb.select(newDb.entries).get();
+        expect(newEntry.term, 'sich gut an|hören');
+        expect(newEntry.searchTerm, 'sich gut anhoren');
+        expect(newEntry.searchTranslations, 'to sound good\nwellknown');
+        // The duplicate rule and the sync state don't change.
+        expect(newEntry.duplicateKey, 'sich gut an|hören');
+        expect(newEntry.needsPush, 0);
       },
     );
   });

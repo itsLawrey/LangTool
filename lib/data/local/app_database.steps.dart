@@ -522,9 +522,129 @@ i1.GeneratedColumn<String> _column_24(String aliasedName) =>
       type: i1.DriftSqlType.string,
       $customConstraints: 'NULL',
     );
+
+final class Schema4 extends i0.VersionedSchema {
+  Schema4({required super.database}) : super(version: 4);
+  @override
+  late final List<i1.DatabaseSchemaEntity> entities = [
+    languagePacks,
+    entries,
+    decks,
+    syncStates,
+    languagePacksOwnerId,
+    entriesPackCreated,
+    entriesUniqueTerm,
+    decksPackId,
+    decksOwnerId,
+  ];
+  late final Shape0 languagePacks = Shape0(
+    source: i0.VersionedTable(
+      entityName: 'language_packs',
+      withoutRowId: false,
+      isStrict: false,
+      tableConstraints: ['PRIMARY KEY(id)'],
+      columns: [
+        _column_0,
+        _column_1,
+        _column_2,
+        _column_3,
+        _column_4,
+        _column_5,
+        _column_6,
+        _column_7,
+      ],
+      attachedDatabase: database,
+    ),
+    alias: null,
+  );
+  late final Shape1 entries = Shape1(
+    source: i0.VersionedTable(
+      entityName: 'entries',
+      withoutRowId: false,
+      isStrict: false,
+      tableConstraints: ['PRIMARY KEY(id)'],
+      columns: [
+        _column_0,
+        _column_1,
+        _column_8,
+        _column_9,
+        _column_10,
+        _column_11,
+        _column_12,
+        _column_13,
+        _column_14,
+        _column_15,
+        _column_16,
+        _column_4,
+        _column_5,
+        _column_6,
+        _column_17,
+        _column_18,
+        _column_19,
+        _column_7,
+      ],
+      attachedDatabase: database,
+    ),
+    alias: null,
+  );
+  late final Shape3 decks = Shape3(
+    source: i0.VersionedTable(
+      entityName: 'decks',
+      withoutRowId: false,
+      isStrict: false,
+      tableConstraints: ['PRIMARY KEY(id)'],
+      columns: [
+        _column_0,
+        _column_1,
+        _column_8,
+        _column_2,
+        _column_23,
+        _column_4,
+        _column_5,
+        _column_6,
+        _column_7,
+      ],
+      attachedDatabase: database,
+    ),
+    alias: null,
+  );
+  late final Shape4 syncStates = Shape4(
+    source: i0.VersionedTable(
+      entityName: 'sync_states',
+      withoutRowId: false,
+      isStrict: false,
+      tableConstraints: ['PRIMARY KEY(owner_id)'],
+      columns: [_column_1, _column_20, _column_21, _column_24, _column_22],
+      attachedDatabase: database,
+    ),
+    alias: null,
+  );
+  final i1.Index languagePacksOwnerId = i1.Index(
+    'language_packs_owner_id',
+    'CREATE INDEX language_packs_owner_id ON language_packs (owner_id)',
+  );
+  final i1.Index entriesPackCreated = i1.Index(
+    'entries_pack_created',
+    'CREATE INDEX entries_pack_created ON entries (pack_id, created_at)',
+  );
+  final i1.Index entriesUniqueTerm = i1.Index(
+    'entries_unique_term',
+    'CREATE UNIQUE INDEX entries_unique_term ON entries (pack_id, word_type, duplicate_key) WHERE deleted_at IS NULL',
+  );
+  final i1.Index decksPackId = i1.Index(
+    'decks_pack_id',
+    'CREATE INDEX decks_pack_id ON decks (pack_id)',
+  );
+  final i1.Index decksOwnerId = i1.Index(
+    'decks_owner_id',
+    'CREATE INDEX decks_owner_id ON decks (owner_id)',
+  );
+}
+
 i0.MigrationStepWithVersion migrationSteps({
   required Future<void> Function(i1.Migrator m, Schema2 schema) from1To2,
   required Future<void> Function(i1.Migrator m, Schema3 schema) from2To3,
+  required Future<void> Function(i1.Migrator m, Schema4 schema) from3To4,
 }) {
   return (currentVersion, database) async {
     switch (currentVersion) {
@@ -538,6 +658,11 @@ i0.MigrationStepWithVersion migrationSteps({
         final migrator = i1.Migrator(database, schema);
         await from2To3(migrator, schema);
         return 3;
+      case 3:
+        final schema = Schema4(database: database);
+        final migrator = i1.Migrator(database, schema);
+        await from3To4(migrator, schema);
+        return 4;
       default:
         throw ArgumentError.value('Unknown migration from $currentVersion');
     }
@@ -547,6 +672,11 @@ i0.MigrationStepWithVersion migrationSteps({
 i1.OnUpgrade stepByStep({
   required Future<void> Function(i1.Migrator m, Schema2 schema) from1To2,
   required Future<void> Function(i1.Migrator m, Schema3 schema) from2To3,
+  required Future<void> Function(i1.Migrator m, Schema4 schema) from3To4,
 }) => i0.VersionedSchema.stepByStepHelper(
-  step: migrationSteps(from1To2: from1To2, from2To3: from2To3),
+  step: migrationSteps(
+    from1To2: from1To2,
+    from2To3: from2To3,
+    from3To4: from3To4,
+  ),
 );

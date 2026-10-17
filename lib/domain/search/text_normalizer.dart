@@ -19,11 +19,15 @@ const _diacriticFolds = {
 String duplicateKey(String text) =>
     text.trim().replaceAll(_whitespace, ' ').toLowerCase();
 
+/// Marks that only show how a word is put together, such as the separable
+/// prefix in `hin|sehen` or a hyphen. Searching ignores them.
+final _separators = RegExp('[|¦·\\-\u2010-\u2014]');
+
 /// Form used for searching: like [duplicateKey], with diacritics also folded
 /// so that typing without them still matches (`schon` → `schön`, `haz` →
-/// `ház`).
+/// `ház`), and without separators (`hinseh` → `hin|sehen`).
 String normalizeForSearch(String text) {
-  final key = duplicateKey(text);
+  final key = duplicateKey(text.replaceAll(_separators, ''));
   final buffer = StringBuffer();
   for (final char in key.split('')) {
     buffer.write(_diacriticFolds[char] ?? char);

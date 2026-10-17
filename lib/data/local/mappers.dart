@@ -5,10 +5,9 @@ import '../../domain/models/entry.dart';
 import '../../domain/models/language_pack.dart';
 import '../../domain/search/text_normalizer.dart';
 import 'app_database.dart';
+import 'search_columns.dart';
 
-/// Separator between normalized translations in `search_translations`.
-/// Normalization collapses whitespace, so it never occurs inside one.
-const translationSeparator = '\n';
+export 'search_columns.dart' show translationSeparator;
 
 extension LanguagePackRowMapping on LanguagePackRow {
   LanguagePack toDomain() => LanguagePack(
@@ -75,10 +74,8 @@ extension EntryMapping on Entry {
         createdAt: createdAt,
         updatedAt: updatedAt,
         deletedAt: Value(deletedAt),
-        searchTerm: normalizeForSearch(term),
-        searchTranslations: translations
-            .map(normalizeForSearch)
-            .join(translationSeparator),
+        searchTerm: searchTermColumn(term),
+        searchTranslations: searchTranslationsColumn(translations),
         duplicateKey: duplicateKey(term),
         needsPush: Value(needsPush),
       );
