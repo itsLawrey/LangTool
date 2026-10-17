@@ -7,6 +7,7 @@ import '../../utils/clock.dart';
 import '../../utils/result.dart';
 import '../local/app_database.dart';
 import '../local/mappers.dart';
+import '../local/pack_deletion.dart';
 
 /// Language packs of a profile. Deleted packs are soft-deleted and hidden.
 abstract interface class LanguagePackRepository {
@@ -103,37 +104,9 @@ class LocalLanguagePackRepository implements LanguagePackRepository {
 
   @override
   Future<Result<void>> delete(String id) => _db.transaction(() async {
-    final now = _clock();
-    final updated =
-        await (_db.update(
-          _db.languagePacks,
-        )..where((p) => p.id.equals(id) & p.deletedAt.isNull())).write(
-          LanguagePacksCompanion(
-            deletedAt: Value(now),
-            updatedAt: Value(now),
-            needsPush: const Value(true),
-          ),
-        );
-    if (updated == 0) return Result.error(NotFoundException(id));
-
-    await (_db.update(
-      _db.entries,
-    )..where((e) => e.packId.equals(id) & e.deletedAt.isNull())).write(
-      EntriesCompanion(
-        deletedAt: Value(now),
-        updatedAt: Value(now),
-        needsPush: const Value(true),
-      ),
-    );
-    await (_db.update(
-      _db.decks,
-    )..where((d) => d.packId.equals(id) & d.deletedAt.isNull())).write(
-      DecksCompanion(
-        deletedAt: Value(now),
-        updatedAt: Value(now),
-        needsPush: const Value(true),
-      ),
-    );
-    return const Result.ok(null);
+    final deleted = await _db.softDeletePack(id, _clock());
+    return deleted
+        ? const Result.ok(null)
+        : Result.error(NotFoundException(id));
   });
 }

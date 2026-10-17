@@ -6,7 +6,7 @@ import '../../../../utils/result.dart';
 import '../../../core/error_message.dart';
 import '../../../core/transfer_labels.dart';
 import '../view_models/import_view_model.dart';
-import 'transfer_button.dart';
+import '../../../core/widgets/bottom_action_button.dart';
 
 /// The packs in a picked file, to choose the ones to import.
 class ImportScreen extends StatelessWidget {
@@ -53,7 +53,7 @@ class ImportScreen extends StatelessWidget {
                 },
               ),
             ),
-            TransferButton(
+            BottomActionButton(
               label: 'Import',
               onPressed: viewModel.canImport
                   ? () => _import(context, viewModel)

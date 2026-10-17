@@ -9,6 +9,8 @@ import '../ui/features/auth/view_models/login_view_model.dart';
 import '../ui/features/auth/views/login_screen.dart';
 import '../ui/features/packs/view_models/packs_view_model.dart';
 import '../ui/features/packs/views/packs_screen.dart';
+import '../ui/features/merge/view_models/merge_view_model.dart';
+import '../ui/features/merge/views/merge_screen.dart';
 import '../ui/features/transfer/view_models/export_view_model.dart';
 import '../ui/features/transfer/view_models/import_view_model.dart';
 import '../ui/features/transfer/views/export_screen.dart';
@@ -74,6 +76,18 @@ GoRouter buildRouter(AuthRepository auth) {
                 ownerId: auth.profile!.id,
               ),
               child: const ExportScreen(),
+            ),
+          ),
+          // Routes.mergePacks.
+          GoRoute(
+            path: 'merge',
+            builder: (context, state) => ChangeNotifierProvider(
+              create: (context) => MergeViewModel(
+                packRepository: context.read(),
+                mergeRepository: context.read(),
+                ownerId: auth.profile!.id,
+              ),
+              child: const MergeScreen(),
             ),
           ),
           packShellRoute(rootNavigatorKey),

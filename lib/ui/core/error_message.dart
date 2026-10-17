@@ -17,6 +17,11 @@ String errorMessage(Exception error, {String languageCode = 'de'}) =>
             .join('\n'),
       InvalidDeckNameException() => 'The deck name is required.',
       InvalidPackNameException() => 'The pack name is required.',
+      MergePacksException(:final reason) => switch (reason) {
+        MergePacksProblem.tooFewPacks => 'Select at least two packs.',
+        MergePacksProblem.mixedLanguages =>
+          'Only packs of the same language can be merged.',
+      },
       NotFoundException() => 'It no longer exists.',
       final PackFileException error => _packFileMessage(error),
       UnsupportedLanguageException(:final languageCode) =>

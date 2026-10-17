@@ -48,12 +48,13 @@ void main() {
   Future<void> addNoun(
     WidgetTester tester,
     String term,
-    String translation,
-  ) async {
+    String translation, {
+    String article = 'das',
+  }) async {
     await tapText(tester, 'New entry');
     await enter(tester, 'Term', term);
     await tapText(tester, 'Article');
-    await tapText(tester, 'das');
+    await tapText(tester, article);
     await enter(tester, 'Translation', translation);
     await tester.tap(find.widgetWithText(FilledButton, 'Save'));
     await wait(tester);
@@ -327,6 +328,69 @@ void main() {
       await tester.pageBack();
       await wait(tester);
     }
+
+    await tester.pumpWidget(const SizedBox());
+    await database.close();
+  });
+
+  testWidgets('merge two packs sharing an entry, deleting the originals', (
+    tester,
+  ) async {
+    auth.emitSignedIn();
+    await tester.pumpWidget(
+      AppScope(
+        dependencies: AppDependencies(
+          database: database,
+          authService: auth,
+          syncApi: server,
+        ),
+      ),
+    );
+    await wait(tester);
+
+    // Two packs that both have "Haus", with different articles and
+    // translations.
+    for (final (pack, article, translation) in [
+      ('Alltag', 'das', 'house'),
+      ('Reise', 'der', 'home'),
+    ]) {
+      await tapText(tester, 'New pack');
+      await tester.enterText(find.byType(TextField), pack);
+      await tapText(tester, 'Create');
+      await tapText(tester, pack);
+      await addNoun(tester, 'Haus', translation, article: article);
+      await tester.pageBack();
+      await wait(tester);
+    }
+
+    // Merge them from the drawer, deleting the originals.
+    await tester.tap(find.byIcon(Icons.menu));
+    await wait(tester, 5);
+    await tapText(tester, 'Merge packs');
+    await tapText(tester, 'Alltag');
+    await tapText(tester, 'Reise');
+    expect(
+      find.text(
+        '2 entries from 2 packs → 1 entry · 1 duplicate combined · 0 decks',
+      ),
+      findsOneWidget,
+    );
+    await tester.enterText(find.widgetWithText(TextFormField, 'Name'), 'Mix');
+    await tapText(tester, 'Delete originals');
+    await tester.tap(find.widgetWithText(FilledButton, 'Merge'));
+    await wait(tester);
+    await tapText(tester, 'Merge and delete');
+    expect(find.text('Merged 2 packs into "Mix".'), findsOneWidget);
+    expect(find.text('Alltag'), findsNothing);
+    expect(find.text('Reise'), findsNothing);
+
+    // One entry with both translations; the newer article wins and the
+    // other is kept in the notes.
+    await tapText(tester, 'Mix');
+    expect(find.text('der Haus'), findsOneWidget);
+    expect(find.text('house, home'), findsOneWidget);
+    await tapText(tester, 'der Haus');
+    expect(find.textContaining('Article (from Alltag): das'), findsOneWidget);
 
     await tester.pumpWidget(const SizedBox());
     await database.close();

@@ -38,6 +38,25 @@ final class InvalidPackNameException implements Exception {
   String toString() => 'InvalidPackNameException()';
 }
 
+/// Why the selected packs cannot be merged.
+enum MergePacksProblem {
+  /// Fewer than two packs are selected.
+  tooFewPacks,
+
+  /// The packs are of different languages.
+  mixedLanguages,
+}
+
+/// The selected packs cannot be merged.
+final class MergePacksException implements Exception {
+  const MergePacksException(this.reason);
+
+  final MergePacksProblem reason;
+
+  @override
+  String toString() => 'MergePacksException(${reason.name})';
+}
+
 /// No active (not soft-deleted) record has the given id.
 final class NotFoundException implements Exception {
   const NotFoundException(this.id);

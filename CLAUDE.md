@@ -42,10 +42,11 @@ Layered per Flutter's official architecture guide (MVVM with `provider` and `go_
   - The session screen and summary save nothing.
   - **Deck editor:** each filter is a `FilterEditor` (`deck_editor/view_models/filters/`) plus a section widget (`deck_editor/views/filters/`). Add a filter by writing both and registering them in `DeckEditorViewModel` and `DeckEditorForm`. Filters the editor can't edit (`unknown`, filters that match nothing) are kept unchanged.
   - Labels and summaries are in `ui/core/recap_labels.dart`.
-- **Packs screen drawer** (`packs/views/packs_drawer.dart`): the account, Import, Export and Sign out.
+- **Packs screen drawer** (`packs/views/packs_drawer.dart`): the account, Import, Export, Merge packs and Sign out.
   - Import calls `FileService.pickFile()` directly in the tap handler, since browsers only open a file dialog from a user gesture. It then pushes `/import` with the bytes as `extra`; without them (e.g. after a web reload) the route redirects to `/`.
   - The import screen previews the packs in the file with checkboxes. The export screen selects packs and saves one file through `FileService.saveFile`.
   - Both live in `ui/features/transfer/`.
+  - The merge screen (`ui/features/merge/`, `/merge`) selects 2+ packs of one language. It takes a name and a mode (keep or delete the originals) and shows a live `PackMergeRepository.watchPreview` summary. Delete mode asks for confirmation.
 - `lib/ui/features/<feature>/{view_models,views}/`: auth, packs, timeline, entry_detail and entry_form.
   - `ui/core/` holds shared labels, display helpers, dialogs and the theme.
   - Keep files small and split widgets into their own files.
@@ -87,6 +88,15 @@ Layered per Flutter's official architecture guide (MVVM with `provider` and `go_
     - duplicates within a pack;
     - a 20 MB decompressed cap.
   - `PackTransferRepository.import` writes all the selected packs in one transaction, as new packs with fresh ids owned by the importing user. It keeps `created_at` and sets `needs_push`, so the packs sync.
+- `lib/domain/merge/`: merging packs into a new pack.
+  - `mergeKey` (word type plus `duplicateKey(term)`) decides which entries are the same.
+  - `mergeEntries` combines one group of matching entries:
+    - the newest entry (`updatedAt`, then the later pack in the selection) gives the term and wins each form; forms only older entries have are kept;
+    - each differing losing form value becomes a note line, worded by the caller's `describeClash` (`clashNote` in `ui/core/merge_labels.dart`);
+    - translations, examples, tags and notes keep every value that's unique under `duplicateKey`;
+    - the earliest `createdAt` is kept.
+  - `uniqueDecks` keeps decks with the same name and the same filters once.
+  - `PackMergeRepository.merge` loads the packs' entries in one query and groups them in one pass. It validates the merged entries, then writes the new pack, entries and decks (and, in delete mode, soft-deletes the originals via `softDeletePack` in `data/local/pack_deletion.dart`) in one transaction.
 - No UI strings (e.g. field labels) belong in the domain layer.
 - `lib/data/local/`: Drift (SQLite) database.
   - `entries` rows carry derived columns written by `mappers.dart`: `search_term`, `search_translations` (newline-joined) and `duplicate_key`.

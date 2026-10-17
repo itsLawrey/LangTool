@@ -7,7 +7,7 @@ import '../../../core/error_message.dart';
 import '../../../core/labels.dart';
 import '../../../core/transfer_labels.dart';
 import '../view_models/export_view_model.dart';
-import 'transfer_button.dart';
+import '../../../core/widgets/bottom_action_button.dart';
 
 /// The user's packs, to choose the ones to export to a file.
 class ExportScreen extends StatelessWidget {
@@ -54,7 +54,7 @@ class ExportScreen extends StatelessWidget {
                 },
               ),
             ),
-            TransferButton(
+            BottomActionButton(
               label: 'Export',
               onPressed: viewModel.canExport
                   ? () => _export(context, viewModel)

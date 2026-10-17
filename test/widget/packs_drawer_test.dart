@@ -49,6 +49,10 @@ void main() {
               path: 'export',
               builder: (_, _) => const Scaffold(body: Text('export')),
             ),
+            GoRoute(
+              path: 'merge',
+              builder: (_, _) => const Scaffold(body: Text('merge')),
+            ),
           ],
         ),
       ],
@@ -64,6 +68,7 @@ void main() {
     expect(find.text('Test User'), findsOneWidget);
     expect(find.text('Import'), findsOneWidget);
     expect(find.text('Export'), findsOneWidget);
+    expect(find.text('Merge packs'), findsOneWidget);
     expect(find.text('Sign out'), findsOneWidget);
     await disposeAndClose(tester, repos.db);
   });
@@ -123,6 +128,16 @@ void main() {
       findsOneWidget,
     );
     expect(find.text('Language packs'), findsOneWidget);
+    await disposeAndClose(tester, repos.db);
+  });
+
+  testWidgets('Merge packs opens the merge screen', (tester) async {
+    await openDrawer(tester);
+
+    await tester.tap(find.text('Merge packs'));
+    await settle(tester);
+
+    expect(find.text('merge'), findsOneWidget);
     await disposeAndClose(tester, repos.db);
   });
 

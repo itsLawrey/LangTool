@@ -9,6 +9,7 @@ abstract final class Routes {
   /// route's `extra`.
   static const importPacks = '/import';
   static const exportPacks = '/export';
+  static const mergePacks = '/merge';
 
   /// The pack's Note tab (entry timeline).
   static String pack(String packId) => '/packs/$packId';

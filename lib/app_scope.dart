@@ -8,6 +8,7 @@ import 'data/repositories/auth_repository.dart';
 import 'data/repositories/deck_repository.dart';
 import 'data/repositories/entry_repository.dart';
 import 'data/repositories/language_pack_repository.dart';
+import 'data/repositories/pack_merge_repository.dart';
 import 'data/repositories/pack_transfer_repository.dart';
 import 'data/repositories/sync_engine.dart';
 import 'data/repositories/sync_repository.dart';
@@ -54,6 +55,9 @@ class AppScope extends StatelessWidget {
           create: (_) => LocalEntryRepository(database),
         ),
         Provider<DeckRepository>(create: (_) => LocalDeckRepository(database)),
+        Provider<PackMergeRepository>(
+          create: (_) => LocalPackMergeRepository(database),
+        ),
         Provider<PackTransferRepository>(
           create: (_) => LocalPackTransferRepository(database),
         ),
