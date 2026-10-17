@@ -7,6 +7,7 @@ import 'package:langtool/data/repositories/auth_repository.dart';
 import 'package:langtool/data/repositories/deck_repository.dart';
 import 'package:langtool/data/repositories/entry_repository.dart';
 import 'package:langtool/data/repositories/language_pack_repository.dart';
+import 'package:langtool/data/repositories/pack_transfer_repository.dart';
 import 'package:langtool/data/repositories/sync_engine.dart';
 import 'package:langtool/data/repositories/sync_repository.dart';
 import 'package:provider/provider.dart';
@@ -38,6 +39,7 @@ Future<GoRouter> pumpRoutes(
         Provider<LanguagePackRepository>.value(value: repos.packs),
         Provider<EntryRepository>.value(value: repos.entries),
         Provider<DeckRepository>.value(value: repos.decks),
+        Provider<PackTransferRepository>.value(value: repos.transfer),
         ...providers,
       ],
       child: MaterialApp.router(routerConfig: router),

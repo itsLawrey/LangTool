@@ -4,6 +4,7 @@ import 'package:langtool/data/local/app_database.dart';
 import 'package:langtool/data/repositories/deck_repository.dart';
 import 'package:langtool/data/repositories/entry_repository.dart';
 import 'package:langtool/data/repositories/language_pack_repository.dart';
+import 'package:langtool/data/repositories/pack_transfer_repository.dart';
 import 'package:langtool/domain/models/deck.dart';
 import 'package:langtool/domain/models/deck_draft.dart';
 import 'package:langtool/domain/models/entry.dart';
@@ -22,6 +23,7 @@ class TestRepositories {
     packs = LocalLanguagePackRepository(db, clock: clock, newId: newId);
     entries = LocalEntryRepository(db, clock: clock, newId: newId);
     decks = LocalDeckRepository(db, clock: clock, newId: newId);
+    transfer = LocalPackTransferRepository(db, clock: clock, newId: newId);
   }
 
   final String idPrefix;
@@ -29,6 +31,7 @@ class TestRepositories {
   late final LanguagePackRepository packs;
   late final EntryRepository entries;
   late final DeckRepository decks;
+  late final PackTransferRepository transfer;
 
   /// The time the next write is stamped with.
   DateTime now = DateTime.utc(2026, 10, 15, 12);
