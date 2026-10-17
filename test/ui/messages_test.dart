@@ -81,6 +81,10 @@ void main() {
         'The pack name is required.',
       );
       expect(
+        errorMessage(const InvalidDeckNameException()),
+        'The deck name is required.',
+      );
+      expect(
         errorMessage(const NotFoundException('x')),
         'It no longer exists.',
       );
