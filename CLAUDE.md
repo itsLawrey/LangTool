@@ -56,6 +56,15 @@ Layered per Flutter's official architecture guide (MVVM with `provider` and `go_
   - `runEntryAction` runs the dialogs (pack picker, delete confirmation) and calls `EntryRepository` directly.
   - If the target pack already has the entry, it asks, then retries with `combine` (the merge rules).
   - `onGone` runs after a delete or move; the entry screen uses it to pop.
+- **Options** (`ui/features/options/`, `/options`, from the drawer) are stored on the device only. `SettingsRepository` sits over a `SettingsStore`: SharedPreferences in `main.dart`, `InMemorySettingsStore` in tests and as the `AppDependencies` default. The options:
+  - `commaTranslations`: one comma-separated Translations field instead of the list;
+  - `quickAddMode`: Ctrl/Cmd+Enter does Save and new, or Save when editing.
+- Entry form keyboard behaviour:
+  - Tab skips the add and remove buttons (`ExcludeFocus`).
+  - Enter moves to the next field; in the last translation or example translation it adds another (an empty last translation moves on instead).
+  - Nouns put Article | Term | Plural on one row (`ArticleTermFields`, from 340 px wide).
+- `EntryCard` shows `cardHeadword` (headword plus `, plural`) and `compactForms` (the other form values joined by ` | `). The entry screen keeps labelled forms.
+- `MaxWidthFrame` (`MaterialApp.builder` in `app.dart`) limits the whole app to a centred 400 px column and sets `MediaQuery` to that width.
 - Entry form: the view owns the text controllers and builds an `EntryDraft`. Before saving it calls `findSimilar` and shows the confirm/dismiss dialog. A `DuplicateEntryException` result offers to open the existing entry.
 - Auth (`data/services/auth_service.dart`, `data/repositories/auth_repository.dart`): Supabase email/password, plus Google.
   - Google on desktop uses a loopback PKCE flow (`loopback_oauth.dart`, port 3693, redirect `http://127.0.0.1:3693/auth-callback` must be allowed in Supabase Auth URL config).
@@ -74,7 +83,7 @@ Layered per Flutter's official architecture guide (MVVM with `provider` and `go_
   - `similar_entries.dart`: the "did you mean an existing entry?" check before adding.
 - `lib/domain/recap/`: recap decks and sessions.
   - A `Deck` stores only filter rules, never entry ids; its entries are resolved at query time.
-  - `deck_filter.dart`: sealed `DeckFilter` (`addedBetween`, `addedInLastDays`, `wordTypes`), combined with AND, stored as JSON with a `type` discriminator. A type this version doesn't know becomes `unknown`: it's kept verbatim (so it survives sync) and matches nothing. Adding a filter type means a new union case plus its SQL condition in `data/local/deck_filter_query.dart`.
+  - `deck_filter.dart`: sealed `DeckFilter` (`addedBetween`, `addedInLastDays`, `wordTypes`, `tags` with `TagMatch.any`/`all`), combined with AND, stored as JSON with a `type` discriminator. A type this version doesn't know becomes `unknown`: it's kept verbatim (so it survives sync) and matches nothing. Adding a filter type means a new union case plus its SQL condition in `data/local/deck_filter_query.dart`.
   - Date filters use the device's local calendar days, converted to UTC bounds.
   - `recap_session.dart`: pure session logic (shuffle, direction, reveal/answer, counts). Nothing is persisted.
 - `lib/domain/transfer/`: the `.langtool` pack file used for import and export.
@@ -105,6 +114,7 @@ Layered per Flutter's official architecture guide (MVVM with `provider` and `go_
 - `lib/data/local/`: Drift (SQLite) database.
   - `entries` rows carry derived columns written by `mappers.dart`: `search_term`, `search_translations` (newline-joined) and `duplicate_key`.
   - A partial unique index on `(pack_id, word_type, duplicate_key) WHERE deleted_at IS NULL` enforces the no-duplicates rule at the DB level.
+  - `tag_keys` holds each tag's `duplicateKey`, wrapped in newlines, so tag filters match whole tags with `LIKE`, ignoring case, since SQLite's `lower()` only folds ASCII. The derived columns' helpers are in `search_columns.dart`.
   - `decks.filters` is JSON text (`DeckFilterListConverter`).
   - `deck_filter_query.dart` turns deck filters into a Drift `Expression<bool>` on `entries`, so matching runs in SQL. Drift compares text-stored dates via `julianday`, so instants compare correctly whatever offset they were stored with.
   - Dates are stored as ISO-8601 text (`build.yaml`).

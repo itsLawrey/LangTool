@@ -46,10 +46,13 @@ class TextListField extends StatelessWidget {
                     focusNode: focusNodes[index],
                     decoration: InputDecoration(labelText: itemLabel),
                     textInputAction: TextInputAction.next,
-                    // The last field adds the next item instead of moving on.
+                    // The last field adds the next item instead of moving on,
+                    // unless it is still empty.
                     onEditingComplete: index == items.length - 1 ? () {} : null,
                     onSubmitted: index == items.length - 1
-                        ? (_) => _addAndFocus()
+                        ? (text) => text.trim().isEmpty
+                              ? FocusScope.of(context).nextFocus()
+                              : _addAndFocus()
                         : null,
                   ),
                 ),

@@ -421,6 +421,12 @@ void main() {
     expect(find.widgetWithText(TextField, 'Translation'), findsNWidgets(2));
     expect(hasFocus(tester, 'Translation', index: 1), isTrue);
 
+    // An empty last item moves on instead of adding another.
+    await tester.testTextInput.receiveAction(TextInputAction.next);
+    await tester.pump();
+    expect(find.widgetWithText(TextField, 'Translation'), findsNWidgets(2));
+    expect(focused(), 'Tags');
+
     await tester.tap(find.text('Add example'));
     await tester.pump();
     await tester.tap(find.widgetWithText(TextField, 'Sentence'));
