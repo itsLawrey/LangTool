@@ -2,11 +2,12 @@
   "version": "0.2.0",
   "configurations": [
     {
+      // The Supabase config is added by `dart.flutterRunAdditionalArgs`
+      // in settings.json, so it also applies to the Run | Debug links.
       "name": "LangTool (dev)",
       "request": "launch",
       "type": "dart",
-      "program": "lib/main.dart",
-      "toolArgs": ["--dart-define-from-file=env/dev.json"]
+      "program": "lib/main.dart"
     }
   ]
 }

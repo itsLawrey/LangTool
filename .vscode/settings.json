@@ -1,0 +1,5 @@
+{
+  // Every `flutter run` from VS Code (F5, the launch config, or the
+  // Run | Debug links above main) gets the Supabase config.
+  "dart.flutterRunAdditionalArgs": ["--dart-define-from-file=env/dev.json"]
+}
