@@ -30,6 +30,9 @@ class DecksScreen extends StatelessWidget {
         actions: const [SyncButton()],
       ),
       floatingActionButton: FloatingActionButton.extended(
+        // The Note tab's button stays in the tree while this tab is shown;
+        // two buttons with the default hero tag would clash.
+        heroTag: null,
         onPressed: () => context.push(Routes.newDeck(viewModel.packId)),
         icon: const Icon(Icons.add),
         label: const Text('New deck'),

@@ -5,12 +5,16 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:langtool/app_scope.dart';
 import 'package:go_router/go_router.dart';
 import 'package:langtool/data/local/app_database.dart';
+import 'package:langtool/data/repositories/deck_repository.dart';
 import 'package:langtool/data/repositories/entry_repository.dart';
 import 'package:langtool/data/repositories/language_pack_repository.dart';
+import 'package:langtool/domain/models/deck.dart';
+import 'package:langtool/domain/models/deck_draft.dart';
 import 'package:langtool/domain/models/entry.dart';
 import 'package:langtool/domain/models/entry_draft.dart';
 import 'package:langtool/domain/models/language_pack.dart';
 import 'package:langtool/domain/models/word_type.dart';
+import 'package:langtool/domain/recap/recap_session.dart';
 import 'package:langtool/routing/routes.dart';
 import 'package:langtool/utils/result.dart';
 
@@ -149,6 +153,49 @@ void main() {
     router.go(Routes.newEntry(packId));
     await settle(tester);
     expect(find.text('New entry'), findsWidgets);
+    await disposeAndClose(tester, database);
+  });
+
+  testWidgets('routes deep links to the recap screens', (tester) async {
+    auth.emitSignedIn();
+    final ids = await tester.runAsync(() async {
+      final pack = (await LocalLanguagePackRepository(database).create(
+        ownerId: 'user-1',
+        name: 'Alltag',
+        languageCode: 'de',
+      ) as Ok<LanguagePack>).value;
+      final deck = (await LocalDeckRepository(database).create(
+        DeckDraft(packId: pack.id, name: 'Everything'),
+      ) as Ok<Deck>).value;
+      return (pack.id, deck.id);
+    });
+    final (packId, deckId) = ids!;
+    await pumpApp(tester);
+    final router = GoRouter.of(tester.element(find.byType(Scaffold).first));
+
+    router.go(Routes.recap(packId));
+    await settle(tester);
+    expect(find.text('Alltag'), findsOneWidget);
+    expect(find.text('Everything'), findsOneWidget);
+    expect(find.byType(NavigationBar), findsOneWidget);
+
+    router.go(Routes.deck(packId, deckId));
+    await settle(tester);
+    expect(find.text('Start'), findsOneWidget);
+    expect(find.byType(NavigationBar), findsNothing);
+
+    router.go(Routes.editDeck(packId, deckId));
+    await settle(tester);
+    expect(find.text('Edit deck'), findsOneWidget);
+
+    router.go(Routes.newDeck(packId));
+    await settle(tester);
+    expect(find.widgetWithText(AppBar, 'New deck'), findsOneWidget);
+
+    router.go(Routes.recapSession(packId, deckId, RecapDirection.mixed));
+    await settle(tester);
+    expect(router.state.uri.queryParameters['direction'], 'mixed');
+    expect(find.byType(NavigationBar), findsNothing);
     await disposeAndClose(tester, database);
   });
 
