@@ -5,7 +5,8 @@ import '../../../domain/models/entry.dart';
 import '../entry_display.dart';
 import '../labels.dart';
 
-/// Summary of an entry: headword, word type, forms, translations and tags.
+/// Summary of an entry: headword (with a noun's plural), word type, the
+/// other forms' values, translations and tags.
 /// Examples and notes are shown in the detail view.
 class EntryCard extends StatelessWidget {
   const EntryCard({
@@ -26,8 +27,7 @@ class EntryCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final languageCode = schema?.code ?? '';
-    final forms = displayForms(entry, schema);
+    final forms = compactForms(entry, schema);
 
     return Card(
       clipBehavior: Clip.antiAlias,
@@ -48,7 +48,7 @@ class EntryCard extends StatelessWidget {
                       children: [
                         Expanded(
                           child: Text(
-                            headword(entry),
+                            cardHeadword(entry),
                             style: theme.textTheme.titleMedium,
                           ),
                         ),
@@ -65,13 +65,7 @@ class EntryCard extends StatelessWidget {
                 ],
               ),
               if (forms.isNotEmpty)
-                Text(
-                  [
-                    for (final (key, value) in forms)
-                      '${fieldLabel(languageCode, key)}: $value',
-                  ].join(' · '),
-                  style: theme.textTheme.bodySmall,
-                ),
+                Text(forms, style: theme.textTheme.bodySmall),
               if (entry.translations.isNotEmpty)
                 Text(
                   entry.translations.join(', '),

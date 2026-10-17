@@ -6,6 +6,7 @@ import 'data/repositories/auth_repository.dart';
 import 'data/repositories/sync_repository.dart';
 import 'routing/router.dart';
 import 'ui/core/theme.dart';
+import 'ui/core/widgets/max_width_frame.dart';
 
 class LangToolApp extends StatefulWidget {
   const LangToolApp({super.key});
@@ -42,5 +43,6 @@ class _LangToolAppState extends State<LangToolApp> {
     theme: buildTheme(Brightness.light),
     darkTheme: buildTheme(Brightness.dark),
     routerConfig: _router,
+    builder: (context, child) => MaxWidthFrame(child: child!),
   );
 }
