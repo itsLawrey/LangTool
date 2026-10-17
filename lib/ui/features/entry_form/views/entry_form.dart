@@ -6,6 +6,7 @@ import '../../../../domain/models/entry_draft.dart';
 import '../../../../domain/models/word_type.dart';
 import '../../../../routing/routes.dart';
 import '../../../../utils/result.dart';
+import '../../../core/entry_display.dart';
 import '../../../core/error_message.dart';
 import '../../../core/labels.dart';
 import '../view_models/entry_form_view_model.dart';
@@ -31,7 +32,10 @@ class _EntryFormState extends State<EntryForm> {
   late final _initial = widget.viewModel.initial;
   late final _schema = widget.viewModel.schema!;
 
-  late WordType _wordType = _initial?.wordType ?? _schema.wordTypes.keys.first;
+  late WordType _wordType =
+      _initial?.wordType ??
+      widget.viewModel.nextWordType ??
+      _schema.wordTypes.keys.first;
   late final _term = TextEditingController(text: _initial?.term);
   late final _forms = {
     for (final MapEntry(:key, :value) in (_initial?.forms ?? {}).entries)
@@ -73,7 +77,9 @@ class _EntryFormState extends State<EntryForm> {
     );
   }
 
-  Future<void> _save() async {
+  /// Saves the entry, then closes the form, or with [andNew] starts a blank
+  /// one for the next entry.
+  Future<void> _save({bool andNew = false}) async {
     if (!_formKey.currentState!.validate()) return;
     final draft = _draft();
     final viewModel = widget.viewModel;
@@ -88,6 +94,10 @@ class _EntryFormState extends State<EntryForm> {
     final result = await viewModel.save(draft);
     if (!mounted) return;
     switch (result) {
+      case Ok(:final value) when andNew:
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('${headword(value)} saved.')));
+        viewModel.startNext(draft.wordType);
       case Ok():
         context.pop();
       case Err(error: DuplicateEntryException(:final existing)):
@@ -123,6 +133,7 @@ class _EntryFormState extends State<EntryForm> {
           const SizedBox(height: 12),
           TextFormField(
             controller: _term,
+            autofocus: widget.viewModel.round > 0,
             decoration: const InputDecoration(labelText: 'Term'),
             validator: (value) =>
                 (value ?? '').trim().isEmpty ? 'Required.' : null,
@@ -158,10 +169,31 @@ class _EntryFormState extends State<EntryForm> {
             maxLines: null,
           ),
           const SizedBox(height: 24),
-          FilledButton(
-            onPressed: widget.viewModel.saving ? null : _save,
-            child: const Text('Save'),
-          ),
+          if (widget.viewModel.isEditing)
+            FilledButton(
+              onPressed: widget.viewModel.saving ? null : _save,
+              child: const Text('Save'),
+            )
+          else
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: widget.viewModel.saving
+                        ? null
+                        : () => _save(andNew: true),
+                    child: const Text('Save and new'),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: FilledButton(
+                    onPressed: widget.viewModel.saving ? null : _save,
+                    child: const Text('Save'),
+                  ),
+                ),
+              ],
+            ),
         ],
       ),
     );

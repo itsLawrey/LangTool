@@ -22,7 +22,7 @@ class EntryFormScreen extends StatelessWidget {
         EntryFormViewModel(missing: true) => const Center(
           child: Text('This entry or pack no longer exists.'),
         ),
-        _ => EntryForm(viewModel: viewModel),
+        _ => EntryForm(key: ValueKey(viewModel.round), viewModel: viewModel),
       },
     );
   }
