@@ -39,10 +39,7 @@ sealed class DeckFilter with _$DeckFilter {
         'added_in_last_days' => DeckFilter.addedInLastDays(
           (json['days']! as num).toInt(),
         ),
-        'word_types' => DeckFilter.wordTypes({
-          for (final name in json['values']! as List<Object?>)
-            WordType.values.byName(name! as String),
-        }),
+        'word_types' => _wordTypesFromJson(json),
         _ => DeckFilter.unknown(json),
       };
 
@@ -65,6 +62,15 @@ sealed class DeckFilter with _$DeckFilter {
     },
     UnknownFilter(:final json) => json,
   };
+}
+
+/// A word type written by a newer app version makes the whole filter
+/// [UnknownFilter], so the deck still loads (and matches nothing) here.
+DeckFilter _wordTypesFromJson(Map<String, Object?> json) {
+  final known = {for (final type in WordType.values) type.name: type};
+  final names = (json['values']! as List<Object?>).cast<String>();
+  if (!names.every(known.containsKey)) return DeckFilter.unknown(json);
+  return DeckFilter.wordTypes({for (final name in names) known[name]!});
 }
 
 /// Calendar dates are stored as `YYYY-MM-DD` and read back as local

@@ -61,3 +61,6 @@ app.*.map.json
 
 # Firebase CLI deploy cache
 .firebase/
+
+# Claude Code agent worktrees
+.claude/worktrees/

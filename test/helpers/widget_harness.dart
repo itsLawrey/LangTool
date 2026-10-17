@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:langtool/data/local/app_database.dart';
 import 'package:langtool/data/local/sync_store.dart';
 import 'package:langtool/data/repositories/auth_repository.dart';
+import 'package:langtool/data/repositories/deck_repository.dart';
 import 'package:langtool/data/repositories/entry_repository.dart';
 import 'package:langtool/data/repositories/language_pack_repository.dart';
 import 'package:langtool/data/repositories/sync_engine.dart';
@@ -30,6 +31,7 @@ Future<GoRouter> pumpRoutes(
       providers: [
         Provider<LanguagePackRepository>.value(value: repos.packs),
         Provider<EntryRepository>.value(value: repos.entries),
+        Provider<DeckRepository>.value(value: repos.decks),
         ...providers,
       ],
       child: MaterialApp.router(routerConfig: router),

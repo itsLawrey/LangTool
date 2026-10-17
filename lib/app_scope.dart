@@ -5,6 +5,7 @@ import 'app.dart';
 import 'data/local/app_database.dart';
 import 'data/local/sync_store.dart';
 import 'data/repositories/auth_repository.dart';
+import 'data/repositories/deck_repository.dart';
 import 'data/repositories/entry_repository.dart';
 import 'data/repositories/language_pack_repository.dart';
 import 'data/repositories/sync_engine.dart';
@@ -47,6 +48,7 @@ class AppScope extends StatelessWidget {
         Provider<EntryRepository>(
           create: (_) => LocalEntryRepository(database),
         ),
+        Provider<DeckRepository>(create: (_) => LocalDeckRepository(database)),
         ChangeNotifierProvider(
           lazy: false,
           create: (context) {

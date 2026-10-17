@@ -121,4 +121,16 @@ void main() {
 
     expect(Deck.fromJson(json).filters, isEmpty);
   });
+
+  test('a word type unknown to this version keeps the filter as unknown', () {
+    final json = <String, Object?>{
+      'type': 'word_types',
+      'values': ['noun', 'particle'],
+    };
+
+    final filter = DeckFilter.fromJson(json);
+
+    expect(filter, DeckFilter.unknown(json));
+    expect(filter.toJson(), json);
+  });
 }
