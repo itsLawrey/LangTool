@@ -1,5 +1,6 @@
 import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:langtool/app_scope.dart';
@@ -48,12 +49,13 @@ void main() {
   Future<void> addNoun(
     WidgetTester tester,
     String term,
-    String translation,
-  ) async {
+    String translation, {
+    String article = 'das',
+  }) async {
     await tapText(tester, 'New entry');
     await enter(tester, 'Term', term);
     await tapText(tester, 'Article');
-    await tapText(tester, 'das');
+    await tapText(tester, article);
     await enter(tester, 'Translation', translation);
     await tester.tap(find.widgetWithText(FilledButton, 'Save'));
     await wait(tester);
@@ -111,16 +113,18 @@ void main() {
 
     // Edit from the detail view.
     await tapText(tester, 'das Haus');
-    await tester.tap(find.byTooltip('Edit'));
-    await wait(tester);
+    await tester.tap(find.byTooltip('Entry actions').last);
+    await wait(tester, 5);
+    await tapText(tester, 'Edit');
     await enter(tester, 'Notes', 'neuter');
     await tester.tap(find.widgetWithText(FilledButton, 'Save'));
     await wait(tester);
     expect(find.text('neuter'), findsOneWidget);
 
     // Delete it.
-    await tester.tap(find.byTooltip('Delete'));
+    await tester.tap(find.byTooltip('Entry actions').last);
     await wait(tester, 5);
+    await tapText(tester, 'Delete');
     await tester.tap(find.widgetWithText(FilledButton, 'Delete'));
     await wait(tester);
     expect(find.text('das Haus'), findsNothing);
@@ -327,6 +331,226 @@ void main() {
       await tester.pageBack();
       await wait(tester);
     }
+
+    await tester.pumpWidget(const SizedBox());
+    await database.close();
+  });
+
+  testWidgets('merge two packs sharing an entry, deleting the originals', (
+    tester,
+  ) async {
+    auth.emitSignedIn();
+    await tester.pumpWidget(
+      AppScope(
+        dependencies: AppDependencies(
+          database: database,
+          authService: auth,
+          syncApi: server,
+        ),
+      ),
+    );
+    await wait(tester);
+
+    // Two packs that both have "Haus", with different articles and
+    // translations.
+    for (final (pack, article, translation) in [
+      ('Alltag', 'das', 'house'),
+      ('Reise', 'der', 'home'),
+    ]) {
+      await tapText(tester, 'New pack');
+      await tester.enterText(find.byType(TextField), pack);
+      await tapText(tester, 'Create');
+      await tapText(tester, pack);
+      await addNoun(tester, 'Haus', translation, article: article);
+      await tester.pageBack();
+      await wait(tester);
+    }
+
+    // Merge them from the drawer, deleting the originals.
+    await tester.tap(find.byIcon(Icons.menu));
+    await wait(tester, 5);
+    await tapText(tester, 'Merge packs');
+    await tapText(tester, 'Alltag');
+    await tapText(tester, 'Reise');
+    expect(
+      find.text(
+        '2 entries from 2 packs → 1 entry · 1 duplicate combined · 0 decks',
+      ),
+      findsOneWidget,
+    );
+    await tester.enterText(find.widgetWithText(TextFormField, 'Name'), 'Mix');
+    await tapText(tester, 'Delete originals');
+    await tester.tap(find.widgetWithText(FilledButton, 'Merge'));
+    await wait(tester);
+    await tapText(tester, 'Merge and delete');
+    expect(find.text('Merged 2 packs into "Mix".'), findsOneWidget);
+    expect(find.text('Alltag'), findsNothing);
+    expect(find.text('Reise'), findsNothing);
+
+    // One entry with both translations; the newer article wins and the
+    // other is kept in the notes.
+    await tapText(tester, 'Mix');
+    expect(find.text('der Haus'), findsOneWidget);
+    expect(find.text('house, home'), findsOneWidget);
+    await tapText(tester, 'der Haus');
+    expect(find.textContaining('Article (from Alltag): das'), findsOneWidget);
+
+    await tester.pumpWidget(const SizedBox());
+    await database.close();
+  });
+
+  testWidgets('move an entry to another pack from its card', (tester) async {
+    auth.emitSignedIn();
+    await tester.pumpWidget(
+      AppScope(
+        dependencies: AppDependencies(
+          database: database,
+          authService: auth,
+          syncApi: server,
+        ),
+      ),
+    );
+    await wait(tester);
+
+    for (final pack in ['Alltag', 'Reise']) {
+      await tapText(tester, 'New pack');
+      await tester.enterText(find.byType(TextField), pack);
+      await tapText(tester, 'Create');
+    }
+    await tapText(tester, 'Alltag');
+    await addNoun(tester, 'Haus', 'house');
+    expect(find.text('Noun'), findsOneWidget);
+
+    // The card's corner menu moves it to Reise.
+    await tester.tap(find.byTooltip('Entry actions'));
+    await wait(tester, 5);
+    await tapText(tester, 'Move to…');
+    await tapText(tester, 'Reise');
+    expect(find.text('Moved to "Reise".'), findsOneWidget);
+    expect(find.text('das Haus'), findsNothing);
+
+    await tester.pageBack();
+    await wait(tester);
+    await tapText(tester, 'Reise');
+    expect(find.text('das Haus'), findsOneWidget);
+
+    await tester.pumpWidget(const SizedBox());
+    await database.close();
+  });
+
+  testWidgets('build a deck of entries with all of the chosen tags', (
+    tester,
+  ) async {
+    auth.emitSignedIn();
+    await tester.pumpWidget(
+      AppScope(
+        dependencies: AppDependencies(
+          database: database,
+          authService: auth,
+          syncApi: server,
+        ),
+      ),
+    );
+    await wait(tester);
+
+    Future<void> addTaggedNoun(String term, String tags) async {
+      await tapText(tester, 'New entry');
+      await enter(tester, 'Term', term);
+      await tapText(tester, 'Article');
+      await tapText(tester, 'das');
+      final tagsField = find.widgetWithText(TextField, 'Tags');
+      await tester.ensureVisible(tagsField);
+      await tester.enterText(tagsField, tags);
+      await tester.tap(find.widgetWithText(FilledButton, 'Save'));
+      await wait(tester);
+    }
+
+    Future<void> tapChip(String label) async {
+      final chip = find.widgetWithText(FilterChip, label);
+      await tester.ensureVisible(chip);
+      await tester.tap(chip);
+      await wait(tester, 5);
+    }
+
+    await tapText(tester, 'New pack');
+    await tester.enterText(find.byType(TextField), 'Alltag');
+    await tapText(tester, 'Create');
+    await tapText(tester, 'Alltag');
+    await addTaggedNoun('Haus', 'A1, home');
+    await addTaggedNoun('Auto', 'a1');
+
+    // A deck of entries tagged both A1 and home.
+    await tapText(tester, 'Recap');
+    await tapText(tester, 'New deck');
+    await tester.enterText(find.widgetWithText(TextField, 'Name'), 'Zuhause');
+    await tapChip('A1');
+    expect(find.text('2 entries match'), findsOneWidget);
+    await tapChip('home');
+    expect(find.text('2 entries match'), findsOneWidget);
+    final allTags = find.text('All tags');
+    await tester.ensureVisible(allTags);
+    await tapText(tester, 'All tags');
+    expect(find.text('1 entry matches'), findsOneWidget);
+    await tester.tap(find.widgetWithText(FilledButton, 'Save'));
+    await wait(tester);
+
+    // The deck page lists only the entry with both tags.
+    expect(find.text('Zuhause'), findsWidgets);
+    expect(find.text('das Haus'), findsOneWidget);
+    expect(find.text('das Auto'), findsNothing);
+
+    await tester.pumpWidget(const SizedBox());
+    await database.close();
+  });
+
+  testWidgets('quick add mode adds two nouns in a row with Ctrl+Enter', (
+    tester,
+  ) async {
+    auth.emitSignedIn();
+    await tester.pumpWidget(
+      AppScope(
+        dependencies: AppDependencies(
+          database: database,
+          authService: auth,
+          syncApi: server,
+        ),
+      ),
+    );
+    await wait(tester);
+
+    // Turn on quick add mode in the options.
+    await tester.tap(find.byIcon(Icons.menu));
+    await wait(tester, 5);
+    await tapText(tester, 'Options');
+    await tapText(tester, 'Quick add mode');
+    await tester.pageBack();
+    await wait(tester);
+
+    await tapText(tester, 'New pack');
+    await tester.enterText(find.byType(TextField), 'Alltag');
+    await tapText(tester, 'Create');
+    await tapText(tester, 'Alltag');
+
+    // Each Ctrl+Enter saves the noun and starts the next one.
+    await tapText(tester, 'New entry');
+    for (final (term, translation) in [('Haus', 'house'), ('Auto', 'car')]) {
+      await enter(tester, 'Term', term);
+      await tapText(tester, 'Article');
+      await tapText(tester, 'das');
+      await enter(tester, 'Translation', translation);
+      await tester.sendKeyDownEvent(LogicalKeyboardKey.controlLeft);
+      await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+      await tester.sendKeyUpEvent(LogicalKeyboardKey.controlLeft);
+      await wait(tester);
+      expect(find.text('New entry'), findsOneWidget);
+      expect(find.widgetWithText(TextField, term), findsNothing);
+      expect(find.textContaining('saved.'), findsOneWidget);
+    }
+
+    await tester.pageBack();
+    await wait(tester);
+    expect(find.text('das Haus'), findsOneWidget);
+    expect(find.text('das Auto'), findsOneWidget);
 
     await tester.pumpWidget(const SizedBox());
     await database.close();

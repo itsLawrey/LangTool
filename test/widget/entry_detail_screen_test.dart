@@ -95,7 +95,9 @@ void main() {
   testWidgets('opens the edit form', (tester) async {
     await openDetail(tester);
 
-    await tester.tap(find.byTooltip('Edit'));
+    await tester.tap(find.byTooltip('Entry actions'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Edit'));
     await settle(tester);
 
     expect(find.text('edit form'), findsOneWidget);
@@ -105,7 +107,9 @@ void main() {
   testWidgets('deletes after confirmation and goes back', (tester) async {
     await openDetail(tester);
 
-    await tester.tap(find.byTooltip('Delete'));
+    await tester.tap(find.byTooltip('Entry actions'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Delete'));
     await tester.pumpAndSettle();
     expect(find.text('Delete "das Haus"?'), findsOneWidget);
     await tester.tap(find.widgetWithText(FilledButton, 'Delete'));
@@ -116,6 +120,71 @@ void main() {
       () => repos.entries.watchEntries(pack.id).first,
     );
     expect(remaining, isEmpty);
+    await disposeAndClose(tester, repos.db);
+  });
+
+  Future<void> chooseAction(WidgetTester tester, String action) async {
+    await tester.tap(find.byTooltip('Entry actions'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text(action));
+    await settle(tester);
+  }
+
+  testWidgets('Move to… moves the entry to the picked pack and goes back', (
+    tester,
+  ) async {
+    final reise = (await tester.runAsync(() => repos.createPack('Reise')))!;
+    await openDetail(tester);
+
+    await chooseAction(tester, 'Move to…');
+    expect(find.text('Move to'), findsOneWidget);
+    await tester.tap(find.text('Reise'));
+    await settle(tester);
+
+    expect(find.text('timeline'), findsOneWidget);
+    expect(find.text('Moved to "Reise".'), findsOneWidget);
+    final moved = await tester.runAsync(
+      () => repos.entries.watchEntries(reise.id).first,
+    );
+    expect(moved!.single.id, haus.id);
+    await disposeAndClose(tester, repos.db);
+  });
+
+  testWidgets('Copy to… asks before combining with an existing entry', (
+    tester,
+  ) async {
+    final reise = (await tester.runAsync(() async {
+      final reise = await repos.createPack('Reise');
+      await repos.addNoun(reise, 'Haus', article: 'der');
+      return reise;
+    }))!;
+    await openDetail(tester);
+
+    await chooseAction(tester, 'Copy to…');
+    await tester.tap(find.text('Reise'));
+    await settle(tester);
+    expect(find.text('"der Haus" is already in Reise'), findsOneWidget);
+    await tester.tap(find.widgetWithText(FilledButton, 'Combine'));
+    await settle(tester);
+
+    expect(find.text('Copied to "Reise" and combined.'), findsOneWidget);
+    expect(find.widgetWithText(AppBar, 'das Haus'), findsOneWidget);
+    final [combined] = (await tester.runAsync(
+      () => repos.entries.watchEntries(reise.id).first,
+    ))!;
+    expect(combined.translations, ['house']);
+    expect(combined.notes, contains('Article (from Deutsch): das'));
+    await disposeAndClose(tester, repos.db);
+  });
+
+  testWidgets('says when there is no other pack of the language', (
+    tester,
+  ) async {
+    await openDetail(tester);
+
+    await chooseAction(tester, 'Copy to…');
+
+    expect(find.text('There is no other German pack.'), findsOneWidget);
     await disposeAndClose(tester, repos.db);
   });
 }

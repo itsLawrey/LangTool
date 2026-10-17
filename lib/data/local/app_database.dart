@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:drift/drift.dart';
 
 import '../../domain/models/deck.dart';
@@ -6,6 +8,7 @@ import '../../domain/models/word_type.dart';
 import '../../domain/recap/deck_filter.dart';
 import 'app_database.steps.dart';
 import 'converters.dart';
+import 'search_columns.dart';
 
 part 'app_database.g.dart';
 
@@ -29,9 +32,9 @@ class LanguagePacks extends Table {
 }
 
 /// Besides the [Entry] fields, rows carry derived columns kept in sync on
-/// every write: [searchTerm] and [searchTranslations] (normalized for search)
-/// and [duplicateKey], which a partial unique index uses to forbid two active
-/// entries with the same term and word type in a pack.
+/// every write: [searchTerm] and [searchTranslations] (normalized for search),
+/// [duplicateKey], which a partial unique index uses to forbid two active
+/// entries with the same term and word type in a pack, and [tagKeys].
 ///
 /// `entries_pack_created` serves the timeline and lookups by pack alone.
 @DataClassName('EntryRow')
@@ -62,6 +65,10 @@ class Entries extends Table {
   /// Normalized translations joined by `\n`.
   TextColumn get searchTranslations => text()();
   TextColumn get duplicateKey => text()();
+
+  /// The tags' duplicate keys, each wrapped in `\n` (see [tagKeysColumn]),
+  /// for the deck tag filter. Only stored locally.
+  TextColumn get tagKeys => text().withDefault(const Constant(''))();
 
   /// Whether this row has local changes not yet uploaded. Rows written by
   /// the app are dirty; rows applied from the server are clean.
@@ -120,7 +127,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase(super.executor);
 
   @override
-  int get schemaVersion => 3;
+  int get schemaVersion => 5;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -142,6 +149,42 @@ class AppDatabase extends _$AppDatabase {
           schema.syncStates,
           schema.syncStates.decksPulledUntil,
         );
+      },
+      // Search ignores separators such as `|` since v4: recompute the
+      // derived search columns. They exist only locally, so nothing is
+      // marked for upload.
+      from3To4: (m, schema) async {
+        final rows = await customSelect(
+          'SELECT id, term, translations FROM entries',
+        ).get();
+        for (final row in rows) {
+          final translations = (jsonDecode(
+            row.read<String>('translations'),
+          ) as List<Object?>).cast<String>();
+          await customStatement(
+            'UPDATE entries SET search_term = ?, search_translations = ? '
+            'WHERE id = ?',
+            [
+              searchTermColumn(row.read<String>('term')),
+              searchTranslationsColumn(translations),
+              row.read<String>('id'),
+            ],
+          );
+        }
+      },
+      // Decks can filter by tag since v5: add the derived tag column and
+      // fill it. It exists only locally, so nothing is marked for upload.
+      from4To5: (m, schema) async {
+        await m.addColumn(schema.entries, schema.entries.tagKeys);
+        final rows = await customSelect('SELECT id, tags FROM entries').get();
+        for (final row in rows) {
+          final tags = (jsonDecode(row.read<String>('tags')) as List<Object?>)
+              .cast<String>();
+          await customStatement(
+            'UPDATE entries SET tag_keys = ? WHERE id = ?',
+            [tagKeysColumn(tags), row.read<String>('id')],
+          );
+        }
       },
     ),
     beforeOpen: (details) async {

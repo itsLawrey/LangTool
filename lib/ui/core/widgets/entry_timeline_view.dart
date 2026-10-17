@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../domain/languages/language_schema.dart';
 import '../../../domain/models/entry.dart';
+import '../entry_actions/entry_actions_menu.dart';
 import '../timeline_items.dart';
 import 'day_header.dart';
 import 'entry_card.dart';
@@ -64,6 +65,7 @@ class EntryTimelineView extends StatelessWidget {
                 entry: entry,
                 schema: schema,
                 onTap: () => onTapEntry(entry),
+                menu: EntryActionsMenu(entry: entry, compact: true),
               ),
             ),
           };

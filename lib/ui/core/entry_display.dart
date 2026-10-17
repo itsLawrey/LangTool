@@ -24,3 +24,18 @@ List<(String key, String value)> displayForms(
         if (entry.forms[key] case final value?) (key, value),
   ];
 }
+
+/// The card title: the [headword], followed by the plural when there is one
+/// (e.g. `die Wette, -n`).
+String cardHeadword(Entry entry) => switch (entry.forms['plural']) {
+  final plural? => '${headword(entry)}, $plural',
+  null => headword(entry),
+};
+
+/// The card's forms line: the values of the forms other than the article and
+/// plural, in schema order (e.g. `sieht hin | sah hin | hat hingesehen`).
+/// Empty if there are none.
+String compactForms(Entry entry, LanguageSchema? schema) => [
+  for (final (key, value) in displayForms(entry, schema))
+    if (key != 'plural') value,
+].join(' | ');

@@ -700,6 +700,18 @@ class $EntriesTable extends Entries with TableInfo<$EntriesTable, EntryRow> {
     type: DriftSqlType.string,
     requiredDuringInsert: true,
   );
+  static const VerificationMeta _tagKeysMeta = const VerificationMeta(
+    'tagKeys',
+  );
+  @override
+  late final GeneratedColumn<String> tagKeys = GeneratedColumn<String>(
+    'tag_keys',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(''),
+  );
   static const VerificationMeta _needsPushMeta = const VerificationMeta(
     'needsPush',
   );
@@ -734,6 +746,7 @@ class $EntriesTable extends Entries with TableInfo<$EntriesTable, EntryRow> {
     searchTerm,
     searchTranslations,
     duplicateKey,
+    tagKeys,
     needsPush,
   ];
   @override
@@ -846,6 +859,12 @@ class $EntriesTable extends Entries with TableInfo<$EntriesTable, EntryRow> {
     } else if (isInserting) {
       context.missing(_duplicateKeyMeta);
     }
+    if (data.containsKey('tag_keys')) {
+      context.handle(
+        _tagKeysMeta,
+        tagKeys.isAcceptableOrUnknown(data['tag_keys']!, _tagKeysMeta),
+      );
+    }
     if (data.containsKey('needs_push')) {
       context.handle(
         _needsPushMeta,
@@ -939,6 +958,10 @@ class $EntriesTable extends Entries with TableInfo<$EntriesTable, EntryRow> {
         DriftSqlType.string,
         data['${effectivePrefix}duplicate_key'],
       )!,
+      tagKeys: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}tag_keys'],
+      )!,
       needsPush: attachedDatabase.typeMapping.read(
         DriftSqlType.bool,
         data['${effectivePrefix}needs_push'],
@@ -984,6 +1007,10 @@ class EntryRow extends DataClass implements Insertable<EntryRow> {
   final String searchTranslations;
   final String duplicateKey;
 
+  /// The tags' duplicate keys, each wrapped in `\n` (see [tagKeysColumn]),
+  /// for the deck tag filter. Only stored locally.
+  final String tagKeys;
+
   /// Whether this row has local changes not yet uploaded. Rows written by
   /// the app are dirty; rows applied from the server are clean.
   final bool needsPush;
@@ -1005,6 +1032,7 @@ class EntryRow extends DataClass implements Insertable<EntryRow> {
     required this.searchTerm,
     required this.searchTranslations,
     required this.duplicateKey,
+    required this.tagKeys,
     required this.needsPush,
   });
   @override
@@ -1049,6 +1077,7 @@ class EntryRow extends DataClass implements Insertable<EntryRow> {
     map['search_term'] = Variable<String>(searchTerm);
     map['search_translations'] = Variable<String>(searchTranslations);
     map['duplicate_key'] = Variable<String>(duplicateKey);
+    map['tag_keys'] = Variable<String>(tagKeys);
     map['needs_push'] = Variable<bool>(needsPush);
     return map;
   }
@@ -1076,6 +1105,7 @@ class EntryRow extends DataClass implements Insertable<EntryRow> {
       searchTerm: Value(searchTerm),
       searchTranslations: Value(searchTranslations),
       duplicateKey: Value(duplicateKey),
+      tagKeys: Value(tagKeys),
       needsPush: Value(needsPush),
     );
   }
@@ -1107,6 +1137,7 @@ class EntryRow extends DataClass implements Insertable<EntryRow> {
         json['searchTranslations'],
       ),
       duplicateKey: serializer.fromJson<String>(json['duplicateKey']),
+      tagKeys: serializer.fromJson<String>(json['tagKeys']),
       needsPush: serializer.fromJson<bool>(json['needsPush']),
     );
   }
@@ -1133,6 +1164,7 @@ class EntryRow extends DataClass implements Insertable<EntryRow> {
       'searchTerm': serializer.toJson<String>(searchTerm),
       'searchTranslations': serializer.toJson<String>(searchTranslations),
       'duplicateKey': serializer.toJson<String>(duplicateKey),
+      'tagKeys': serializer.toJson<String>(tagKeys),
       'needsPush': serializer.toJson<bool>(needsPush),
     };
   }
@@ -1155,6 +1187,7 @@ class EntryRow extends DataClass implements Insertable<EntryRow> {
     String? searchTerm,
     String? searchTranslations,
     String? duplicateKey,
+    String? tagKeys,
     bool? needsPush,
   }) => EntryRow(
     id: id ?? this.id,
@@ -1174,6 +1207,7 @@ class EntryRow extends DataClass implements Insertable<EntryRow> {
     searchTerm: searchTerm ?? this.searchTerm,
     searchTranslations: searchTranslations ?? this.searchTranslations,
     duplicateKey: duplicateKey ?? this.duplicateKey,
+    tagKeys: tagKeys ?? this.tagKeys,
     needsPush: needsPush ?? this.needsPush,
   );
   EntryRow copyWithCompanion(EntriesCompanion data) {
@@ -1205,6 +1239,7 @@ class EntryRow extends DataClass implements Insertable<EntryRow> {
       duplicateKey: data.duplicateKey.present
           ? data.duplicateKey.value
           : this.duplicateKey,
+      tagKeys: data.tagKeys.present ? data.tagKeys.value : this.tagKeys,
       needsPush: data.needsPush.present ? data.needsPush.value : this.needsPush,
     );
   }
@@ -1229,6 +1264,7 @@ class EntryRow extends DataClass implements Insertable<EntryRow> {
           ..write('searchTerm: $searchTerm, ')
           ..write('searchTranslations: $searchTranslations, ')
           ..write('duplicateKey: $duplicateKey, ')
+          ..write('tagKeys: $tagKeys, ')
           ..write('needsPush: $needsPush')
           ..write(')'))
         .toString();
@@ -1253,6 +1289,7 @@ class EntryRow extends DataClass implements Insertable<EntryRow> {
     searchTerm,
     searchTranslations,
     duplicateKey,
+    tagKeys,
     needsPush,
   );
   @override
@@ -1276,6 +1313,7 @@ class EntryRow extends DataClass implements Insertable<EntryRow> {
           other.searchTerm == this.searchTerm &&
           other.searchTranslations == this.searchTranslations &&
           other.duplicateKey == this.duplicateKey &&
+          other.tagKeys == this.tagKeys &&
           other.needsPush == this.needsPush);
 }
 
@@ -1297,6 +1335,7 @@ class EntriesCompanion extends UpdateCompanion<EntryRow> {
   final Value<String> searchTerm;
   final Value<String> searchTranslations;
   final Value<String> duplicateKey;
+  final Value<String> tagKeys;
   final Value<bool> needsPush;
   final Value<int> rowid;
   const EntriesCompanion({
@@ -1317,6 +1356,7 @@ class EntriesCompanion extends UpdateCompanion<EntryRow> {
     this.searchTerm = const Value.absent(),
     this.searchTranslations = const Value.absent(),
     this.duplicateKey = const Value.absent(),
+    this.tagKeys = const Value.absent(),
     this.needsPush = const Value.absent(),
     this.rowid = const Value.absent(),
   });
@@ -1338,6 +1378,7 @@ class EntriesCompanion extends UpdateCompanion<EntryRow> {
     required String searchTerm,
     required String searchTranslations,
     required String duplicateKey,
+    this.tagKeys = const Value.absent(),
     this.needsPush = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : id = Value(id),
@@ -1373,6 +1414,7 @@ class EntriesCompanion extends UpdateCompanion<EntryRow> {
     Expression<String>? searchTerm,
     Expression<String>? searchTranslations,
     Expression<String>? duplicateKey,
+    Expression<String>? tagKeys,
     Expression<bool>? needsPush,
     Expression<int>? rowid,
   }) {
@@ -1394,6 +1436,7 @@ class EntriesCompanion extends UpdateCompanion<EntryRow> {
       if (searchTerm != null) 'search_term': searchTerm,
       if (searchTranslations != null) 'search_translations': searchTranslations,
       if (duplicateKey != null) 'duplicate_key': duplicateKey,
+      if (tagKeys != null) 'tag_keys': tagKeys,
       if (needsPush != null) 'needs_push': needsPush,
       if (rowid != null) 'rowid': rowid,
     });
@@ -1417,6 +1460,7 @@ class EntriesCompanion extends UpdateCompanion<EntryRow> {
     Value<String>? searchTerm,
     Value<String>? searchTranslations,
     Value<String>? duplicateKey,
+    Value<String>? tagKeys,
     Value<bool>? needsPush,
     Value<int>? rowid,
   }) {
@@ -1438,6 +1482,7 @@ class EntriesCompanion extends UpdateCompanion<EntryRow> {
       searchTerm: searchTerm ?? this.searchTerm,
       searchTranslations: searchTranslations ?? this.searchTranslations,
       duplicateKey: duplicateKey ?? this.duplicateKey,
+      tagKeys: tagKeys ?? this.tagKeys,
       needsPush: needsPush ?? this.needsPush,
       rowid: rowid ?? this.rowid,
     );
@@ -1507,6 +1552,9 @@ class EntriesCompanion extends UpdateCompanion<EntryRow> {
     if (duplicateKey.present) {
       map['duplicate_key'] = Variable<String>(duplicateKey.value);
     }
+    if (tagKeys.present) {
+      map['tag_keys'] = Variable<String>(tagKeys.value);
+    }
     if (needsPush.present) {
       map['needs_push'] = Variable<bool>(needsPush.value);
     }
@@ -1536,6 +1584,7 @@ class EntriesCompanion extends UpdateCompanion<EntryRow> {
           ..write('searchTerm: $searchTerm, ')
           ..write('searchTranslations: $searchTranslations, ')
           ..write('duplicateKey: $duplicateKey, ')
+          ..write('tagKeys: $tagKeys, ')
           ..write('needsPush: $needsPush, ')
           ..write('rowid: $rowid')
           ..write(')'))
@@ -3051,6 +3100,7 @@ typedef $$EntriesTableCreateCompanionBuilder = EntriesCompanion Function({
   required String searchTerm,
   required String searchTranslations,
   required String duplicateKey,
+  Value<String> tagKeys,
   Value<bool> needsPush,
   Value<int> rowid,
 });
@@ -3072,6 +3122,7 @@ typedef $$EntriesTableUpdateCompanionBuilder = EntriesCompanion Function({
   Value<String> searchTerm,
   Value<String> searchTranslations,
   Value<String> duplicateKey,
+  Value<String> tagKeys,
   Value<bool> needsPush,
   Value<int> rowid,
 });
@@ -3196,6 +3247,11 @@ class $$EntriesTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
+  ColumnFilters<String> get tagKeys => $composableBuilder(
+    column: $table.tagKeys,
+    builder: (column) => ColumnFilters(column),
+  );
+
   ColumnFilters<bool> get needsPush => $composableBuilder(
     column: $table.needsPush,
     builder: (column) => ColumnFilters(column),
@@ -3314,6 +3370,11 @@ class $$EntriesTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get tagKeys => $composableBuilder(
+    column: $table.tagKeys,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<bool> get needsPush => $composableBuilder(
     column: $table.needsPush,
     builder: (column) => ColumnOrderings(column),
@@ -3411,6 +3472,9 @@ class $$EntriesTableAnnotationComposer
     builder: (column) => column,
   );
 
+  GeneratedColumn<String> get tagKeys =>
+      $composableBuilder(column: $table.tagKeys, builder: (column) => column);
+
   GeneratedColumn<bool> get needsPush =>
       $composableBuilder(column: $table.needsPush, builder: (column) => column);
 
@@ -3483,6 +3547,7 @@ class $$EntriesTableTableManager
                 Value<String> searchTerm = const Value.absent(),
                 Value<String> searchTranslations = const Value.absent(),
                 Value<String> duplicateKey = const Value.absent(),
+                Value<String> tagKeys = const Value.absent(),
                 Value<bool> needsPush = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => EntriesCompanion(
@@ -3503,6 +3568,7 @@ class $$EntriesTableTableManager
                 searchTerm: searchTerm,
                 searchTranslations: searchTranslations,
                 duplicateKey: duplicateKey,
+                tagKeys: tagKeys,
                 needsPush: needsPush,
                 rowid: rowid,
               ),
@@ -3525,6 +3591,7 @@ class $$EntriesTableTableManager
                 required String searchTerm,
                 required String searchTranslations,
                 required String duplicateKey,
+                Value<String> tagKeys = const Value.absent(),
                 Value<bool> needsPush = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => EntriesCompanion.insert(
@@ -3545,6 +3612,7 @@ class $$EntriesTableTableManager
                 searchTerm: searchTerm,
                 searchTranslations: searchTranslations,
                 duplicateKey: duplicateKey,
+                tagKeys: tagKeys,
                 needsPush: needsPush,
                 rowid: rowid,
               ),

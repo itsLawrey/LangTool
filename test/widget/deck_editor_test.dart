@@ -194,7 +194,7 @@ void main() {
     tester,
   ) async {
     const unknown = DeckFilter.unknown({
-      'type': 'tags',
+      'type': 'tagged',
       'values': ['a'],
     });
     final filters = [
@@ -236,5 +236,97 @@ void main() {
     expect(saved.name, 'New');
     expect(saved.filters, filters);
     await disposeAndClose(tester, repos.db);
+  });
+
+  group('tags', () {
+    SegmentedButton<TagMatch> matchButton(WidgetTester tester) =>
+        tester.widget(find.byType(SegmentedButton<TagMatch>));
+
+    FilterChip chip(WidgetTester tester, String label) =>
+        tester.widget(find.widgetWithText(FilterChip, label));
+
+    Future<void> addTagged(
+      WidgetTester tester,
+      String term,
+      List<String> tags,
+    ) async {
+      await tester.runAsync(
+        () => repos.addNoun(pack, term, article: 'der', tags: tags),
+      );
+    }
+
+    testWidgets('a pack without tags says so', (tester) async {
+      await open(tester, Routes.newDeck(pack.id));
+
+      expect(find.text('Tags'), findsOneWidget);
+      expect(find.text('No tags in this pack yet.'), findsOneWidget);
+      expect(find.byType(SegmentedButton<TagMatch>), findsNothing);
+      await disposeAndClose(tester, repos.db);
+    });
+
+    testWidgets('chips and the match mode set the count, and save', (
+      tester,
+    ) async {
+      await addTagged(tester, 'Tisch', ['A1', 'food']);
+      await addTagged(tester, 'Teller', ['food']);
+      await addTagged(tester, 'Stuhl', ['a1']);
+      await open(tester, Routes.newDeck(pack.id));
+
+      expect(find.text('No tags in this pack yet.'), findsNothing);
+      expect(find.widgetWithText(FilterChip, 'A1'), findsOneWidget);
+      expect(find.widgetWithText(FilterChip, 'a1'), findsNothing);
+      expect(find.text('5 entries match'), findsOneWidget);
+      expect(find.text('Any tag'), findsOneWidget);
+      expect(find.text('All tags'), findsOneWidget);
+      expect(matchButton(tester).onSelectionChanged, isNull);
+
+      await tapAndSettle(tester, find.widgetWithText(FilterChip, 'A1'));
+      expect(chip(tester, 'A1').selected, isTrue);
+      expect(find.text('2 entries match'), findsOneWidget);
+      expect(matchButton(tester).onSelectionChanged, isNull);
+
+      await tapAndSettle(tester, find.widgetWithText(FilterChip, 'food'));
+      expect(find.text('3 entries match'), findsOneWidget);
+      expect(matchButton(tester).onSelectionChanged, isNotNull);
+
+      await tapAndSettle(tester, find.text('All tags'));
+      expect(matchButton(tester).selected, {TagMatch.all});
+      expect(find.text('1 entry matches'), findsOneWidget);
+
+      await tester.enterText(find.widgetWithText(TextField, 'Name'), 'A1 food');
+      await tapAndSettle(tester, find.widgetWithText(FilledButton, 'Save'));
+
+      final [deck] = await storedDecks(tester);
+      expect(deck.filters, [
+        DeckFilter.tags(const {'A1', 'food'}, TagMatch.all),
+      ]);
+      await disposeAndClose(tester, repos.db);
+    });
+
+    testWidgets('editing selects the tags, also ones no entry has', (
+      tester,
+    ) async {
+      await addTagged(tester, 'Tisch', ['A1', 'food']);
+      final deck = (await tester.runAsync(
+        () => repos.createDeck(pack, 'Tagged', [
+          DeckFilter.tags(const {'a1', 'gone'}, TagMatch.all),
+        ]),
+      ))!;
+      final router = await open(tester, Routes.deck(pack.id, deck.id));
+      router.push(Routes.editDeck(pack.id, deck.id));
+      await settle(tester);
+
+      expect(chip(tester, 'A1').selected, isTrue);
+      expect(chip(tester, 'gone').selected, isTrue);
+      expect(chip(tester, 'food').selected, isFalse);
+      expect(matchButton(tester).selected, {TagMatch.all});
+      expect(find.text('0 entries match'), findsOneWidget);
+
+      await tapAndSettle(tester, find.widgetWithText(FilterChip, 'gone'));
+      expect(find.widgetWithText(FilterChip, 'gone'), findsNothing);
+      expect(find.text('1 entry matches'), findsOneWidget);
+      expect(matchButton(tester).onSelectionChanged, isNull);
+      await disposeAndClose(tester, repos.db);
+    });
   });
 }

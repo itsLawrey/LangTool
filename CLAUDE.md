@@ -42,15 +42,29 @@ Layered per Flutter's official architecture guide (MVVM with `provider` and `go_
   - The session screen and summary save nothing.
   - **Deck editor:** each filter is a `FilterEditor` (`deck_editor/view_models/filters/`) plus a section widget (`deck_editor/views/filters/`). Add a filter by writing both and registering them in `DeckEditorViewModel` and `DeckEditorForm`. Filters the editor can't edit (`unknown`, filters that match nothing) are kept unchanged.
   - Labels and summaries are in `ui/core/recap_labels.dart`.
-- **Packs screen drawer** (`packs/views/packs_drawer.dart`): the account, Import, Export and Sign out.
+- **Packs screen drawer** (`packs/views/packs_drawer.dart`): the account, Import, Export, Merge packs and Sign out.
   - Import calls `FileService.pickFile()` directly in the tap handler, since browsers only open a file dialog from a user gesture. It then pushes `/import` with the bytes as `extra`; without them (e.g. after a web reload) the route redirects to `/`.
   - The import screen previews the packs in the file with checkboxes. The export screen selects packs and saves one file through `FileService.saveFile`.
   - Both live in `ui/features/transfer/`.
+  - The merge screen (`ui/features/merge/`, `/merge`) selects 2+ packs of one language. It takes a name and a mode (keep or delete the originals) and shows a live `PackMergeRepository.watchPreview` summary. Delete mode asks for confirmation.
 - `lib/ui/features/<feature>/{view_models,views}/`: auth, packs, timeline, entry_detail and entry_form.
   - `ui/core/` holds shared labels, display helpers, dialogs and the theme.
   - Keep files small and split widgets into their own files.
   - UI strings live in the UI layer: `labels.dart` (field and word-type labels, validation messages) and `error_message.dart` (maps repository exceptions).
 - Timeline: `TimelineViewModel` watches `EntryRepository.watchTimeline(limit)` through `PagedEntries` (`ui/core/paged_entries.dart`), which grows `limit` by `pageSize` as the list nears the end. `EntryTimelineView` (`ui/core/widgets/`, shared with the deck page) builds the day headers and `EntryCard`s lazily with `ListView.builder`, so both DB reads and rendering are paged. A search query switches the source to `search()` hits, shown best match first without day headers. It re-runs on `watchChanges()`.
+- **Entry actions** (`ui/core/entry_actions/`): the ⋮ menu has Edit, Move to…, Copy to… and Delete. It sits in each `EntryCard`'s corner (after the word type; `EntryTimelineView` adds it) and on the entry screen's app bar.
+  - `runEntryAction` runs the dialogs (pack picker, delete confirmation) and calls `EntryRepository` directly.
+  - If the target pack already has the entry, it asks, then retries with `combine` (the merge rules).
+  - `onGone` runs after a delete or move; the entry screen uses it to pop.
+- **Options** (`ui/features/options/`, `/options`, from the drawer) are stored on the device only. `SettingsRepository` sits over a `SettingsStore`: SharedPreferences in `main.dart`, `InMemorySettingsStore` in tests and as the `AppDependencies` default. The options:
+  - `commaTranslations`: one comma-separated Translations field instead of the list;
+  - `quickAddMode`: Ctrl/Cmd+Enter does Save and new, or Save when editing.
+- Entry form keyboard behaviour:
+  - Tab skips the add and remove buttons (`ExcludeFocus`).
+  - Enter moves to the next field; in the last translation or example translation it adds another (an empty last translation moves on instead).
+  - Nouns put Article | Term | Plural on one row (`ArticleTermFields`, from 340 px wide).
+- `EntryCard` shows `cardHeadword` (headword plus `, plural`) and `compactForms` (the other form values joined by ` | `). The entry screen keeps labelled forms.
+- `MaxWidthFrame` (`MaterialApp.builder` in `app.dart`) limits the whole app to a centred 600 px column, with sides in the scaffold background colour, and sets `MediaQuery` to that width.
 - Entry form: the view owns the text controllers and builds an `EntryDraft`. Before saving it calls `findSimilar` and shows the confirm/dismiss dialog. A `DuplicateEntryException` result offers to open the existing entry.
 - Auth (`data/services/auth_service.dart`, `data/repositories/auth_repository.dart`): Supabase email/password, plus Google.
   - Google on desktop uses a loopback PKCE flow (`loopback_oauth.dart`, port 3693, redirect `http://127.0.0.1:3693/auth-callback` must be allowed in Supabase Auth URL config).
@@ -63,13 +77,13 @@ Layered per Flutter's official architecture guide (MVVM with `provider` and `go_
 - `lib/domain/search/`: pure Dart search logic with no DB.
   - `text_normalizer.dart` defines two keys:
     - `duplicateKey`: case and whitespace folded, umlauts kept, so "schon" ≠ "schön";
-    - `normalizeForSearch`: also folds German and Hungarian diacritics.
+    - `normalizeForSearch`: also folds German and Hungarian diacritics and drops separators (`|`, `¦`, `·`, hyphens and dashes), so `hinseh` finds `hin|sehen`. Changing it changes the stored `search_*` columns, so it needs a schema bump whose step recomputes them (see `from3To4`).
   - `fuzzy.dart`: edit distance (optimal string alignment) with a length-scaled typo tolerance.
   - `entry_ranker.dart`: classifies matches (exact > prefix > contains > fuzzy, term before translation) and orders results.
   - `similar_entries.dart`: the "did you mean an existing entry?" check before adding.
 - `lib/domain/recap/`: recap decks and sessions.
   - A `Deck` stores only filter rules, never entry ids; its entries are resolved at query time.
-  - `deck_filter.dart`: sealed `DeckFilter` (`addedBetween`, `addedInLastDays`, `wordTypes`), combined with AND, stored as JSON with a `type` discriminator. A type this version doesn't know becomes `unknown`: it's kept verbatim (so it survives sync) and matches nothing. Adding a filter type means a new union case plus its SQL condition in `data/local/deck_filter_query.dart`.
+  - `deck_filter.dart`: sealed `DeckFilter` (`addedBetween`, `addedInLastDays`, `wordTypes`, `tags` with `TagMatch.any`/`all`), combined with AND, stored as JSON with a `type` discriminator. A type this version doesn't know becomes `unknown`: it's kept verbatim (so it survives sync) and matches nothing. Adding a filter type means a new union case plus its SQL condition in `data/local/deck_filter_query.dart`.
   - Date filters use the device's local calendar days, converted to UTC bounds.
   - `recap_session.dart`: pure session logic (shuffle, direction, reveal/answer, counts). Nothing is persisted.
 - `lib/domain/transfer/`: the `.langtool` pack file used for import and export.
@@ -87,10 +101,20 @@ Layered per Flutter's official architecture guide (MVVM with `provider` and `go_
     - duplicates within a pack;
     - a 20 MB decompressed cap.
   - `PackTransferRepository.import` writes all the selected packs in one transaction, as new packs with fresh ids owned by the importing user. It keeps `created_at` and sets `needs_push`, so the packs sync.
+- `lib/domain/merge/`: merging packs into a new pack.
+  - `mergeKey` (word type plus `duplicateKey(term)`) decides which entries are the same.
+  - `mergeEntries` combines one group of matching entries:
+    - the newest entry (`updatedAt`, then the later pack in the selection) gives the term and wins each form; forms only older entries have are kept;
+    - each differing losing form value becomes a note line, worded by the caller's `describeClash` (`clashNote` in `ui/core/merge_labels.dart`);
+    - translations, examples, tags and notes keep every value that's unique under `duplicateKey`;
+    - the earliest `createdAt` is kept.
+  - `uniqueDecks` keeps decks with the same name and the same filters once.
+  - `PackMergeRepository.merge` loads the packs' entries in one query and groups them in one pass. It validates the merged entries, then writes the new pack, entries and decks (and, in delete mode, soft-deletes the originals via `softDeletePack` in `data/local/pack_deletion.dart`) in one transaction.
 - No UI strings (e.g. field labels) belong in the domain layer.
 - `lib/data/local/`: Drift (SQLite) database.
   - `entries` rows carry derived columns written by `mappers.dart`: `search_term`, `search_translations` (newline-joined) and `duplicate_key`.
   - A partial unique index on `(pack_id, word_type, duplicate_key) WHERE deleted_at IS NULL` enforces the no-duplicates rule at the DB level.
+  - `tag_keys` holds each tag's `duplicateKey`, wrapped in newlines, so tag filters match whole tags with `LIKE`, ignoring case, since SQLite's `lower()` only folds ASCII. The derived columns' helpers are in `search_columns.dart`.
   - `decks.filters` is JSON text (`DeckFilterListConverter`).
   - `deck_filter_query.dart` turns deck filters into a Drift `Expression<bool>` on `entries`, so matching runs in SQL. Drift compares text-stored dates via `julianday`, so instants compare correctly whatever offset they were stored with.
   - Dates are stored as ISO-8601 text (`build.yaml`).
@@ -105,6 +129,7 @@ Layered per Flutter's official architecture guide (MVVM with `provider` and `go_
   - `EntryRepository.add`/`update` validate against the pack's `LanguageSchema`, then the duplicate rule.
   - `search` runs a SQL `LIKE` on the normalized columns for direct matches. Only if there are none, it scores a lightweight `(id, keys)` projection in Dart for fuzzy matches.
   - `DeckRepository.watchMatchCount` is a live SQL `count()` for the deck editor; `matchingEntries` loads a deck's entries, oldest first.
+  - `EntryRepository.transfer` copies an entry to another pack of the same language (new id, same `createdAt`), or moves it there (same row with a new `pack_id`). A duplicate in the target fails with `DuplicateEntryException` unless `combine` is given. Then `mergeEntries` folds it into the existing entry, which keeps its `createdAt` because the server never changes `created_at`, and a moved source is deleted.
   - Deletes are soft. Deleting a pack soft-deletes its entries and decks.
   - Clock and id generator are injectable (`lib/utils/clock.dart`; ids are UUID v7).
 - Tests use an in-memory DB: `AppDatabase(NativeDatabase.memory())`.

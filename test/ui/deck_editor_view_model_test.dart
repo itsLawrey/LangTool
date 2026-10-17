@@ -180,7 +180,7 @@ void main() {
 
   test('editing loads the filters and keeps unknown ones', () async {
     const unknown = DeckFilter.unknown({
-      'type': 'tags',
+      'type': 'tagged',
       'values': ['a'],
     });
     final filters = [
@@ -222,6 +222,104 @@ void main() {
     expect(viewModel.added.lastDays, 3);
     expect(viewModel.keptFilters, isEmpty);
     await settle(() => viewModel.count == 1);
+  });
+
+  group('tags', () {
+    setUp(() async {
+      await repos.addNoun(pack, 'Tisch', article: 'der', tags: ['A1', 'food']);
+      await repos.addNoun(pack, 'Brot', tags: ['a1 ', 'Möbel']);
+    });
+
+    test("lists the pack's tags and filters by them", () async {
+      await create();
+      final tags = viewModel.tags;
+      await settle(() => tags.ready);
+      expect(tags.tags, ['A1', 'food', 'Möbel']);
+      await settle(() => viewModel.count == 4);
+
+      tags.setSelected('food', true);
+      expect(viewModel.filters, [
+        DeckFilter.tags(const {'food'}, TagMatch.any),
+      ]);
+      await settle(() => viewModel.count == 1);
+
+      tags.setSelected('A1', true);
+      expect(tags.selectedCount, 2);
+      await settle(() => viewModel.count == 2);
+
+      tags.setMatch(TagMatch.all);
+      expect(viewModel.filters, [
+        DeckFilter.tags(const {'A1', 'food'}, TagMatch.all),
+      ]);
+      await settle(() => viewModel.count == 1);
+
+      tags
+        ..setSelected('a1', false)
+        ..setSelected('food', false);
+      expect(viewModel.filters, isEmpty);
+      await settle(() => viewModel.count == 4);
+    });
+
+    test('updates the tags live', () async {
+      await create();
+      await settle(() => viewModel.tags.tags.length == 3);
+
+      await repos.addNoun(pack, 'Stuhl', article: 'der', tags: ['B2']);
+
+      await settle(() => viewModel.tags.tags.contains('B2'));
+    });
+
+    test('creates a deck with a tag filter', () async {
+      await create();
+      await settle(() => viewModel.tags.ready);
+      viewModel.tags
+        ..setSelected('A1', true)
+        ..setSelected('Möbel', true)
+        ..setMatch(TagMatch.all);
+      await settle(() => viewModel.count == 1);
+
+      final result = await viewModel.save('A1 furniture');
+
+      final deck = (result as Ok<Deck>).value;
+      expect(deck.filters, [
+        DeckFilter.tags(const {'A1', 'Möbel'}, TagMatch.all),
+      ]);
+      final entries = await repos.decks.matchingEntries(pack.id, deck.filters);
+      expect([for (final entry in entries) entry.term], ['Brot']);
+    });
+
+    test('editing loads the tags, also ones the pack no longer has', () async {
+      final filters = [
+        DeckFilter.tags(const {'a1', 'gone'}, TagMatch.all),
+      ];
+      final deck = await repos.createDeck(pack, 'Tagged', filters);
+      await create(deckId: deck.id);
+      final tags = viewModel.tags;
+      await settle(() => tags.ready);
+
+      expect(tags.tags, ['A1', 'food', 'gone', 'Möbel']);
+      expect(tags.isSelected('A1'), isTrue);
+      expect(tags.isSelected('gone'), isTrue);
+      expect(tags.isSelected('food'), isFalse);
+      expect(tags.match, TagMatch.all);
+      expect(viewModel.keptFilters, isEmpty);
+      expect(viewModel.filters, filters);
+      await settle(() => viewModel.count == 0);
+
+      tags.setSelected('gone', false);
+      await settle(() => viewModel.count == 2);
+      expect(tags.tags, ['A1', 'food', 'Möbel']);
+    });
+
+    test('editing keeps a tag filter without tags', () async {
+      const empty = DeckFilter.tags({}, TagMatch.any);
+      final deck = await repos.createDeck(pack, 'Empty', const [empty]);
+      await create(deckId: deck.id);
+
+      expect(viewModel.keptFilters, [empty]);
+      expect(viewModel.tags.selectedCount, 0);
+      await settle(() => viewModel.count == 0);
+    });
   });
 
   test('a missing deck or pack is reported', () async {

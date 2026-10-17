@@ -159,6 +159,7 @@ Widget _entryForm(String packId, {String? entryId}) => ChangeNotifierProvider(
   create: (context) => EntryFormViewModel(
     entryRepository: context.read(),
     packRepository: context.read(),
+    settingsRepository: context.read(),
     packId: packId,
     entryId: entryId,
   ),

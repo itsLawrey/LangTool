@@ -7,7 +7,7 @@ import '../../../../data/services/file_service.dart';
 import '../../../../routing/routes.dart';
 import '../../../core/error_message.dart';
 
-/// The signed-in account, import, export and sign out.
+/// The signed-in account, import, export, merge, options and sign out.
 class PacksDrawer extends StatelessWidget {
   const PacksDrawer({super.key});
 
@@ -32,7 +32,17 @@ class PacksDrawer extends StatelessWidget {
             ListTile(
               leading: const Icon(Icons.save_alt),
               title: const Text('Export'),
-              onTap: () => _export(context),
+              onTap: () => _open(context, Routes.exportPacks),
+            ),
+            ListTile(
+              leading: const Icon(Icons.merge),
+              title: const Text('Merge packs'),
+              onTap: () => _open(context, Routes.mergePacks),
+            ),
+            ListTile(
+              leading: const Icon(Icons.tune),
+              title: const Text('Options'),
+              onTap: () => _open(context, Routes.options),
             ),
             const Divider(),
             ListTile(
@@ -61,9 +71,10 @@ class PacksDrawer extends StatelessWidget {
     }
   }
 
-  void _export(BuildContext context) {
+  /// Closes the drawer and opens [route].
+  void _open(BuildContext context, String route) {
     final router = GoRouter.of(context);
     Navigator.pop(context);
-    router.push(Routes.exportPacks);
+    router.push(route);
   }
 }

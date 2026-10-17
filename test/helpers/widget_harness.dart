@@ -7,9 +7,12 @@ import 'package:langtool/data/repositories/auth_repository.dart';
 import 'package:langtool/data/repositories/deck_repository.dart';
 import 'package:langtool/data/repositories/entry_repository.dart';
 import 'package:langtool/data/repositories/language_pack_repository.dart';
+import 'package:langtool/data/repositories/pack_merge_repository.dart';
 import 'package:langtool/data/repositories/pack_transfer_repository.dart';
+import 'package:langtool/data/repositories/settings_repository.dart';
 import 'package:langtool/data/repositories/sync_engine.dart';
 import 'package:langtool/data/repositories/sync_repository.dart';
+import 'package:langtool/data/services/in_memory_settings_store.dart';
 import 'package:provider/provider.dart';
 import 'package:provider/single_child_widget.dart';
 
@@ -20,11 +23,13 @@ import 'test_repositories.dart';
 /// Pumps [routes] in a [MaterialApp.router] with [repos] and [providers]
 /// provided, starting at [initialLocation]. [navigatorKey] is the root
 /// navigator's key, for routes that are placed on it from within a shell.
+/// [settings] defaults to all options off, stored in memory.
 Future<GoRouter> pumpRoutes(
   WidgetTester tester, {
   required TestRepositories repos,
   required List<RouteBase> routes,
   List<SingleChildWidget> providers = const [],
+  SettingsRepository? settings,
   String initialLocation = '/',
   GlobalKey<NavigatorState>? navigatorKey,
 }) async {
@@ -40,6 +45,13 @@ Future<GoRouter> pumpRoutes(
         Provider<EntryRepository>.value(value: repos.entries),
         Provider<DeckRepository>.value(value: repos.decks),
         Provider<PackTransferRepository>.value(value: repos.transfer),
+        Provider<PackMergeRepository>.value(value: repos.merge),
+        if (settings != null)
+          ChangeNotifierProvider.value(value: settings)
+        else
+          ChangeNotifierProvider(
+            create: (_) => SettingsRepository(InMemorySettingsStore()),
+          ),
         ...providers,
       ],
       child: MaterialApp.router(routerConfig: router),

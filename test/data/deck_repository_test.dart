@@ -99,6 +99,7 @@ void main() {
         DeckFilter.addedBetween(from: DateTime(2026, 10), to: null),
         const DeckFilter.addedInLastDays(7),
         const DeckFilter.wordTypes({WordType.verb, WordType.noun}),
+        const DeckFilter.tags({'A1', 'Möbel'}, TagMatch.all),
         const DeckFilter.unknown({'type': 'tagged', 'tag': 'A1'}),
       ];
       final deck = await repos.createDeck(pack, 'All', filters);

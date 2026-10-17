@@ -122,6 +122,19 @@ void main() {
       expect(message(PackFileProblem.tooLarge), 'This file is too large.');
     });
 
+    test('describes each merge problem', () {
+      expect(
+        errorMessage(const MergePacksException(MergePacksProblem.tooFewPacks)),
+        'Select at least two packs.',
+      );
+      expect(
+        errorMessage(
+          const MergePacksException(MergePacksProblem.mixedLanguages),
+        ),
+        'Only packs of the same language can be merged.',
+      );
+    });
+
     test('passes auth messages through and wraps anything else', () {
       expect(
         errorMessage(const AuthException('Invalid login credentials')),

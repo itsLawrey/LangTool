@@ -1,4 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:langtool/data/repositories/settings_repository.dart';
+import 'package:langtool/data/services/in_memory_settings_store.dart';
 import 'package:langtool/domain/exceptions.dart';
 import 'package:langtool/domain/models/entry_draft.dart';
 import 'package:langtool/domain/models/language_pack.dart';
@@ -11,11 +13,13 @@ import '../helpers/test_repositories.dart';
 void main() {
   late TestRepositories repos;
   late LanguagePack pack;
+  late SettingsRepository settings;
 
   Future<EntryFormViewModel> create({String? entryId}) async {
     final viewModel = EntryFormViewModel(
       entryRepository: repos.entries,
       packRepository: repos.packs,
+      settingsRepository: settings,
       packId: pack.id,
       entryId: entryId,
     );
@@ -35,9 +39,22 @@ void main() {
   setUp(() async {
     repos = TestRepositories();
     pack = await repos.createPack();
+    settings = SettingsRepository(InMemorySettingsStore());
   });
 
   tearDown(() => repos.close());
+
+  test('reads the entry form options', () async {
+    final viewModel = await create();
+    expect(viewModel.commaTranslations, isFalse);
+    expect(viewModel.quickAddMode, isFalse);
+
+    await settings.setCommaTranslations(true);
+    await settings.setQuickAddMode(true);
+
+    expect(viewModel.commaTranslations, isTrue);
+    expect(viewModel.quickAddMode, isTrue);
+  });
 
   test('adds an entry to its pack', () async {
     final viewModel = await create();

@@ -38,6 +38,33 @@ final class InvalidPackNameException implements Exception {
   String toString() => 'InvalidPackNameException()';
 }
 
+/// The target pack is of a different language.
+final class LanguageMismatchException implements Exception {
+  const LanguageMismatchException();
+
+  @override
+  String toString() => 'LanguageMismatchException()';
+}
+
+/// Why the selected packs cannot be merged.
+enum MergePacksProblem {
+  /// Fewer than two packs are selected.
+  tooFewPacks,
+
+  /// The packs are of different languages.
+  mixedLanguages,
+}
+
+/// The selected packs cannot be merged.
+final class MergePacksException implements Exception {
+  const MergePacksException(this.reason);
+
+  final MergePacksProblem reason;
+
+  @override
+  String toString() => 'MergePacksException(${reason.name})';
+}
+
 /// No active (not soft-deleted) record has the given id.
 final class NotFoundException implements Exception {
   const NotFoundException(this.id);

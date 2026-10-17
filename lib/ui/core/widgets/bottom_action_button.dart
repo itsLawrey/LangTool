@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 
 /// The screen's full-width action button, below its list.
-class TransferButton extends StatelessWidget {
-  const TransferButton({
+class BottomActionButton extends StatelessWidget {
+  const BottomActionButton({
     super.key,
     required this.label,
     required this.onPressed,
